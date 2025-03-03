@@ -1,6 +1,6 @@
 'use client'
 
-import { Container } from '@/components'
+import { Container, StartButton } from '@/components'
 import { Box, Heading, VStack } from '@chakra-ui/react'
 import Image from 'next/image'
 
@@ -38,7 +38,7 @@ export default function Page() {
           Summon, craft, fight, and forge your adventure!
         </Box>
         <Box className="animate_delay animate__animated animate__delay-5s animate__fadeIn animate__slow" paddingY="5">
-          {/*  <StartButton /> */}
+          <StartButton />
         </Box>
       </VStack>
     </Container>
