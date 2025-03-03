@@ -22,9 +22,9 @@ export const metadata: Metadata = {
     url: URL,
     images: [
       {
-        url: '',
-        width: 800,
-        height: 1400,
+        url: '/assets/opengraph.jpeg',
+        width: 1400,
+        height: 788,
         alt: 'og image arising'
       }
     ],
