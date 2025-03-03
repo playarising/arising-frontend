@@ -12,7 +12,8 @@ const URL = 'https://playarising.com'
 
 const TITLE = 'Arising: A Twirl of Destinies'
 
-export const METADATA: Metadata = {
+// biome-ignore lint/style/useNamingConvention: required to be lowercase for NextJS specific functionality
+export const metadata: Metadata = {
   themeColor: '#022127',
   title: TITLE,
   description: DESCRIPTION,
