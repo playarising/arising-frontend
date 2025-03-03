@@ -24,9 +24,8 @@ export default function Page() {
         <Box
           className="animate__animated animate_delay animate__delay-3s animate__fadeIn animate__slow"
           color="custom-blue"
-          fontSize={{ base: '2xl', md: '5xl' }}
         >
-          <Heading>A Twirl of Destinies</Heading>
+          <Heading size={{ base: '2xl', md: '5xl' }}>A Twirl of Destinies</Heading>
         </Box>
         <Box
           className="animate_delay animate__animated animate__delay-4s animate__fadeIn animate__slow"
