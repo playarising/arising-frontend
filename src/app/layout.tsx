@@ -1,5 +1,5 @@
 import { ThemeProvider, WalletProvider } from '@/providers'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Cinzel, Montserrat } from 'next/font/google'
 
 const MONTSERRAT = Montserrat({ variable: '--font-montserrat', subsets: ['latin', 'latin-ext'] })
@@ -14,7 +14,6 @@ const TITLE = 'Arising: A Twirl of Destinies'
 
 // biome-ignore lint/style/useNamingConvention: required to be lowercase for NextJS specific functionality
 export const metadata: Metadata = {
-  themeColor: '#022127',
   title: TITLE,
   description: DESCRIPTION,
   openGraph: {
@@ -33,6 +32,11 @@ export const metadata: Metadata = {
     locale: 'en_US',
     type: 'website'
   }
+}
+
+// biome-ignore lint/style/useNamingConvention: required to be lowercase for NextJS specific functionality
+export const viewport: Viewport = {
+  themeColor: '#022127'
 }
 
 export default function RootLayout({
