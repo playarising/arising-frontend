@@ -1,0 +1,36 @@
+.animate_delay {
+  --animate-delay: 0.15s;
+}
+
+.background {
+  --animate-duration: 2s;
+}
+
+.__react_modal_image__header {
+  height: 50px !important;
+}
+
+.__react_modal_image__icon_menu {
+  margin-top: 10px;
+  margin-right: 10px;
+}
+
+.swiper-button-next {
+  color: #57e1ec !important;
+}
+
+.swiper-button-prev {
+  color: #57e1ec !important;
+}
+
+.swiper-pagination-bullet {
+  background: #57e1ec !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: var(--font-cinzel);
+}

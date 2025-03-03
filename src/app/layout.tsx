@@ -45,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${MONTSERRAT.className} ${CINZEL.className}`} suppressHydrationWarning>
+    <html lang="en" className={`${MONTSERRAT.variable} ${CINZEL.variable}`} suppressHydrationWarning>
       <body>
         <ThemeProvider>
           <WalletProvider>

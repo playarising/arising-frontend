@@ -1,3 +1,6 @@
+import './global.css'
+import 'animate.css'
+
 import { createSystem, defaultConfig, defineConfig } from '@chakra-ui/react'
 
 const TOKENS = {
@@ -7,17 +10,14 @@ const TOKENS = {
     'custom-dark-primary': { value: '#022127' },
     'custom-keppel': { value: '#3398a5' },
     'custom-light-silver': { value: '#c8caca' }
-  },
-  fonts: {
-    heading: { value: 'var(--font-montserrat)' },
-    body: { value: 'var(--font-cinzel)' }
   }
 }
 
 const CONFIG = defineConfig({
   globalCss: {
     body: {
-      background: 'custom-dark-primary'
+      background: 'custom-dark-primary',
+      fontFamily: 'var(--font-montserrat)'
     }
   },
   theme: {
