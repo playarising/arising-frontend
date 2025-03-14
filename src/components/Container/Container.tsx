@@ -22,14 +22,14 @@ export function Container({
   image = '/assets/backgrounds/map.jpg'
 }: IContainerProps) {
   return (
-    <Stack margin={0} maxHeight="calc(100vh)" minHeight="calc(100vh)" position="relative">
+    <Stack margin={0} maxHeight="100dvh" minHeight="100dvh" position="relative">
       {withBackground && (
-        <Box height="calc(100vh)" margin="0 !important" minWidth="calc(100vw)" position="absolute" top={0}>
+        <Box height="100dvh" margin="0 !important" minWidth="100dvw" position="absolute" top={0}>
           <NextImage alt="World of Etia" src={image} style={{ objectFit: 'cover' }} fill />
           <ChakraContainer
             backgroundColor="black"
-            height="calc(100vh)"
-            minWidth="calc(100vw)"
+            height="100dvh"
+            minWidth="100dvw"
             opacity={bgOpacity}
             position="absolute"
             top={0}
@@ -37,7 +37,7 @@ export function Container({
           />
         </Box>
       )}
-      <Center height="calc(100vh)" width="full">
+      <Center height="100dvh" width="full">
         {children}
       </Center>
       {showFooter && <Footer />}
