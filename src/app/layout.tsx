@@ -1,3 +1,4 @@
+import { Header } from '@/components'
 import { ThemeProvider, WalletProvider } from '@/providers'
 import type { Metadata, Viewport } from 'next'
 import { Cinzel, Montserrat } from 'next/font/google'
@@ -49,7 +50,10 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <WalletProvider>
-            <main style={{ position: 'relative', overflowX: 'hidden' }}>{children}</main>
+            <main style={{ position: 'relative', overflowX: 'hidden' }}>
+              <Header />
+              {children}
+            </main>
           </WalletProvider>
         </ThemeProvider>
       </body>
