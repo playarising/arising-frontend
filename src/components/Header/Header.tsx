@@ -1,12 +1,11 @@
 'use client'
 
 import Image from 'next/image'
-import NextImage from 'next/image'
 
 import { Link } from '@/components'
 import { Box, Button, Drawer, HStack, Stack, Text, VStack, useBreakpointValue } from '@chakra-ui/react'
 import { useState } from 'react'
-import { BarsIcon, TwitterIcon } from '../Icons'
+import { BarsIcon, CloseIcon, TwitterIcon } from '../Icons'
 
 const MENU_LINKS = [
   { href: '/', item: 'HOME', title: 'home' },
@@ -88,21 +87,14 @@ function SideMenu({ open, close }: { open: boolean; close: () => void }) {
     <Drawer.Root open={open} size="full">
       <Drawer.Backdrop />
       <Drawer.Content background="custom-dark-primary" position="relative">
-        <Box opacity="30%" position="absolute" right="-80px" top="0">
-          <NextImage
-            alt="Ard Noble"
-            height="768"
-            src="/assets/backgrounds/ard-noble.png"
-            style={{ objectFit: 'contain' }}
-            width="421"
-            priority
-          />
-        </Box>
         <Drawer.Header>
-          <HStack align="center" direction="row" justify="space-between" marginX="2">
-            <Link href="/">
-              <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.png" width="484" />
-            </Link>
+          <HStack align="center" direction="row" justify="space-between" marginX="2" height="70px">
+            <Box height="70px" width="70px">
+              <Link href="/">
+                <Image alt="Arising Logo Top" height="422" src="/assets/logo-top.png" width="484" priority />
+              </Link>
+            </Box>
+
             <Button
               _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
               background="black"
@@ -111,13 +103,17 @@ function SideMenu({ open, close }: { open: boolean; close: () => void }) {
               width="40px"
               onClick={() => close()}
             >
-              <BarsIcon height="5" width="5" />
+              <CloseIcon height="5" width="5" />
             </Button>
           </HStack>
         </Drawer.Header>
 
         <Drawer.Body>
-          <VStack align="start" />
+          <VStack align="start">
+            {MENU_LINKS.map((link) => (
+              <MenuLink key={link.title} text={link.title} href={link.href} />
+            ))}
+          </VStack>
         </Drawer.Body>
 
         <Drawer.Footer paddingY={10}>
