@@ -1,7 +1,8 @@
 'use client'
 
 import { Box, HStack, Stack, useBreakpointValue } from '@chakra-ui/react'
-import { useState } from 'react'
+import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { HeaderLogo } from './Logo'
 import { MenuButton } from './MenuButton'
 import { MenuLink } from './MenuLink'
@@ -16,6 +17,14 @@ export const MENU_LINKS = [
 
 export function Header() {
   const [open, setOpen] = useState(false)
+
+  const pathname = usePathname()
+
+  useEffect(() => {
+    if (!pathname) return
+
+    setOpen(false)
+  }, [pathname])
 
   const mobile = useBreakpointValue({ base: true, lg: false })
 
