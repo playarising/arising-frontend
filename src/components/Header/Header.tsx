@@ -30,7 +30,7 @@ export function Header() {
 
   return (
     <Stack width="full" m={0}>
-      <Box position="absolute" width="full">
+      <Box position="absolute" width="full" overflow="hidden">
         <Sidebar open={open} close={() => setOpen(false)} />
       </Box>
       <HStack
