@@ -16,14 +16,15 @@ export function Sidebar({ open, close }: { open: boolean; close: () => void }) {
             bg="black"
             color="custom-blue"
             size="sm"
-            w="40px"
+            width="36px"
+            height="36px"
             onClick={close}
           >
             <CloseIcon height={5} width={5} />
           </Button>
         </DrawerHeader>
         <DrawerBody>
-          <VStack align="start" spaceY={4}>
+          <VStack align="start" spaceY={2} mt="10">
             {MENU_LINKS.map((link) => (
               <MenuLink key={link.href} label={link.label} href={link.href} />
             ))}
