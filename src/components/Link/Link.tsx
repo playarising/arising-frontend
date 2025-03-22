@@ -4,19 +4,14 @@ import NextLink, { type LinkProps as NextLinkProps } from 'next/link'
 import type { ReactNode } from 'react'
 
 export type TLinkProps = NextLinkProps & {
-  isExternal?: boolean
+  external?: boolean
   children: ReactNode
   rel?: string
 }
 
-export function Link({ children, href, isExternal = false, rel }: TLinkProps) {
+export function Link({ children, href, external = false, rel }: TLinkProps) {
   return (
-    <NextLink
-      href={href}
-      rel={isExternal ? 'noopener noreferrer' : rel}
-      target={isExternal ? '_blank' : '_self'}
-      passHref
-    >
+    <NextLink href={href} rel={external ? 'noopener noreferrer' : rel} target={external ? '_blank' : '_self'} passHref>
       {children}
     </NextLink>
   )

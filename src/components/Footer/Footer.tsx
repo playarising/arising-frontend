@@ -17,7 +17,7 @@ export function Footer() {
       width="full"
       zIndex="100"
     >
-      <Link href="https://kindynos.mx" isExternal>
+      <Link href="https://kindynos.mx" external>
         <Text textAlign="center" color="custom-blue" fontSize="sm">
           © {new Date().getFullYear()}, Grupo Kindynos.
         </Text>
