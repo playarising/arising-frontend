@@ -2,16 +2,90 @@
 
 import Image from 'next/image'
 import NextImage from 'next/image'
-import { useRouter } from 'next/navigation'
 
 import { Link } from '@/components'
-import { Box, Button, Drawer, Flex, HStack, Stack, Text, VStack, useBreakpointValue } from '@chakra-ui/react'
+import { Box, Button, Drawer, HStack, Stack, Text, VStack, useBreakpointValue } from '@chakra-ui/react'
 import { useState } from 'react'
 import { BarsIcon, TwitterIcon } from '../Icons'
 
-function SideMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+const MENU_LINKS = [
+  { href: '/', item: 'HOME', title: 'home' },
+  {
+    href: '/civilizations',
+    item: 'CIVILIZATIONS',
+    title: 'civilizations'
+  },
+  {
+    href: '/explore',
+    item: 'EXPLORE',
+    title: 'explore'
+  },
+  { href: '/play', item: 'PLAY', title: 'play' }
+]
+
+function TwitterButton() {
   return (
-    <Drawer.Root open={open} size="full" onExitComplete={onClose}>
+    <Link href="https://twitter.com/playarising" isExternal>
+      <Button
+        _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
+        background="black"
+        color="custom-blue"
+        height="36px"
+        width="36px"
+        paddingX="0"
+      >
+        <TwitterIcon height={5} width={5} />
+      </Button>
+    </Link>
+  )
+}
+
+function MenuButton({ setOpen }: { setOpen: (open: boolean) => void }) {
+  return (
+    <Button
+      _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
+      background="black"
+      color="custom-blue"
+      size="sm"
+      width="40px"
+      onClick={() => setOpen(true)}
+    >
+      <BarsIcon height="5" width="5" />
+    </Button>
+  )
+}
+
+function MenuLink({ href, text }: { href: string; text: string }) {
+  const mobile = useBreakpointValue({ base: true, lg: false })
+
+  return (
+    <Link href={href}>
+      <Button
+        _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
+        background="black"
+        color="custom-blue"
+        height="36px"
+      >
+        <Text
+          fontSize="sm"
+          fontWeight="bold"
+          letterSpacing="1px"
+          margin={0}
+          padding={0}
+          rounded="md"
+          textAlign={mobile ? 'left' : 'center'}
+          width="full"
+        >
+          {text.toUpperCase()}
+        </Text>
+      </Button>
+    </Link>
+  )
+}
+
+function SideMenu({ open, close }: { open: boolean; close: () => void }) {
+  return (
+    <Drawer.Root open={open} size="full">
       <Drawer.Backdrop />
       <Drawer.Content background="custom-dark-primary" position="relative">
         <Box opacity="30%" position="absolute" right="-80px" top="0">
@@ -26,111 +100,33 @@ function SideMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
         </Box>
         <Drawer.Header>
           <HStack align="center" direction="row" justify="space-between" marginX="2">
-            <Flex alignItems="center" width="40px">
-              <Link href="/">
-                <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.png" width="484" />
-              </Link>
-            </Flex>
-            <Drawer.CloseTrigger
-              _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
-              background="black"
-              color="custom-blue"
-              height="30px"
-              width="30px"
-            />
-          </HStack>
-        </Drawer.Header>
-
-        <Drawer.Body>
-          <VStack align="start">
-            <MenuLinks isDesktop={false} onClose={onClose} />
-          </VStack>
-        </Drawer.Body>
-
-        <Drawer.Footer paddingY={10}>
-          <VStack align="left" width="full">
-            <HStack justifyContent="left" gap="2" width="full">
-              <MenuButtons />
-            </HStack>
-          </VStack>
-        </Drawer.Footer>
-      </Drawer.Content>
-    </Drawer.Root>
-  )
-}
-
-function MenuButtons() {
-  return (
-    <>
-      <Link href="https://twitter.com/playarising" isExternal>
-        <Button
-          _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
-          background="black"
-          color="custom-blue"
-          height="32px"
-          paddingX="0"
-        >
-          <TwitterIcon height={5} width={5} />
-        </Button>
-      </Link>
-    </>
-  )
-}
-
-function MenuLinks({ isDesktop, onClose }: { isDesktop: boolean; onClose?: () => void }) {
-  const router = useRouter()
-
-  const headerLinks = [
-    { href: '/', item: 'HOME', title: 'home' },
-    {
-      href: '/civilizations',
-      item: 'CIVILIZATIONS',
-      title: 'civilizations'
-    },
-    {
-      href: '/explore',
-      item: 'EXPLORE',
-      title: 'explore'
-    },
-    { href: '/play', item: 'PLAY', title: 'play' }
-  ]
-
-  const handleClick = (route: string, onClose?: () => void) => {
-    router.push(route)
-    if (onClose) {
-      onClose()
-    }
-  }
-
-  return (
-    <>
-      {headerLinks.map((link) => (
-        <Box key={link.title} padding={1} width={!isDesktop ? '200px' : ''}>
-          <Link href={link.href}>
+            <Link href="/">
+              <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.png" width="484" />
+            </Link>
             <Button
               _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
               background="black"
               color="custom-blue"
               size="sm"
-              onClick={() => handleClick(link.href, onClose)}
+              width="40px"
+              onClick={() => close()}
             >
-              <Text
-                fontSize="sm"
-                fontWeight="bold"
-                letterSpacing="1px"
-                margin={0}
-                padding={0}
-                rounded="md"
-                textAlign={!isDesktop ? 'center' : 'left'}
-                width="full"
-              >
-                {link.item}
-              </Text>
+              <BarsIcon height="5" width="5" />
             </Button>
-          </Link>
-        </Box>
-      ))}
-    </>
+          </HStack>
+        </Drawer.Header>
+
+        <Drawer.Body>
+          <VStack align="start" />
+        </Drawer.Body>
+
+        <Drawer.Footer paddingY={10}>
+          <VStack align="left" width="full">
+            <HStack justifyContent="left" gap="2" width="full" />
+          </VStack>
+        </Drawer.Footer>
+      </Drawer.Content>
+    </Drawer.Root>
   )
 }
 
@@ -139,39 +135,22 @@ export function Header() {
 
   const mobile = useBreakpointValue({ base: true, lg: false })
 
-  const handleClose = () => {
-    setOpen(false)
-  }
-
   return (
     <Stack margin="0 !important" position="absolute" top={0} width="full" zIndex="100">
-      <SideMenu open={open} onClose={handleClose} />
-      <HStack direction="row" justify="space-between" marginX="10" marginY="2">
-        <Flex alignItems="center" height="80px" width="40px">
+      <SideMenu open={open} close={() => setOpen(false)} />
+      <HStack direction="row" justify="space-between" marginX="10" marginY="2" height="80px" alignItems="center">
+        <Box height="70px" width="70px">
           <Link href="/">
-            <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.png" width="484" priority />
+            <Image alt="Arising Logo Top" height="422" src="/assets/logo-top.png" width="484" priority />
           </Link>
-        </Flex>
-        <HStack justify="right">
-          {!mobile && (
-            <>
-              <MenuLinks isDesktop />
-              <MenuButtons />
-            </>
+        </Box>
+        <HStack justifyContent="end" width="full" alignItems="center">
+          {mobile ? (
+            <MenuButton setOpen={setOpen} />
+          ) : (
+            MENU_LINKS.map((link) => <MenuLink key={link.title} text={link.title} href={link.href} />)
           )}
-
-          {mobile && (
-            <Button
-              _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
-              background="black"
-              color="custom-blue"
-              size="sm"
-              width="40px"
-              onClick={() => setOpen(true)}
-            >
-              <BarsIcon height="10" width="10" />
-            </Button>
-          )}
+          <TwitterButton />
         </HStack>
       </HStack>
     </Stack>
