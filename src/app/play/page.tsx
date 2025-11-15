@@ -1,6 +1,9 @@
-import { Box, VisuallyHidden } from '@chakra-ui/react'
-import type { Metadata } from 'next'
 import { PageContainer } from '@/components'
+import { PlayContent } from './PlayContent'
+import { authOptions } from '@/lib/auth'
+import type { Metadata } from 'next'
+import { getServerSession } from 'next-auth'
+import { redirect } from 'next/navigation'
 
 export const metadata: Metadata = {
   title: 'Play Arising',
@@ -8,12 +11,16 @@ export const metadata: Metadata = {
   alternates: { canonical: '/play' }
 }
 
-export default function PlayPage() {
+export default async function PlayPage() {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user?.address) {
+    redirect('/')
+  }
+
   return (
-    <PageContainer fallbackBackground="black" showFooter={false} withBackground={false}>
-      <Box background="black" height="full" width="full">
-        <VisuallyHidden>Play experience coming soon.</VisuallyHidden>
-      </Box>
+    <PageContainer fallbackBackground="black" withBackground={false}>
+      <PlayContent />
     </PageContainer>
   )
 }

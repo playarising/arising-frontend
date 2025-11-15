@@ -1,128 +1,143 @@
 'use client'
 
-import { Box, Button, Drawer, Flex, HStack, Stack, Text, useBreakpointValue, VStack } from '@chakra-ui/react'
+import { Button, Flex, HStack, Stack, Text } from '@chakra-ui/react'
+import { useWallet } from '@solana/wallet-adapter-react'
+import bs58 from 'bs58'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-
-import { BarsIcon } from '../icons'
+import { usePathname, useRouter } from 'next/navigation'
+import { signIn, signOut, useSession } from 'next-auth/react'
+import { useEffect, useRef } from 'react'
 import { AppLink } from '../navigation'
 
-const HEADER_LINKS = [
-  { href: '/', item: 'HOME', title: 'home' },
-  { href: '/play', item: 'PLAY', title: 'play' }
-]
+export function SiteHeader() {
+  const { connected, disconnect, publicKey, signMessage } = useWallet()
 
-function SideMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return (
-    <Drawer.Root open={open} size="full" onExitComplete={onClose}>
-      <Drawer.Backdrop />
-      <Drawer.Content background="custom-dark-primary" position="relative">
-        <Drawer.Header>
-          <HStack align="center" direction="row" justify="space-between" marginX="2">
-            <Flex alignItems="center" width="40px">
-              <AppLink href="/">
-                <Image alt="Arising Logo Top" height="768" src="/assets/logo.webp" width="484" />
-              </AppLink>
-            </Flex>
-            <Drawer.CloseTrigger
-              _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
-              background="black"
-              color="custom-blue"
-              height="30px"
-              width="30px"
-            />
-          </HStack>
-        </Drawer.Header>
+  const { data: session, status: sessionStatus } = useSession()
 
-        <Drawer.Body>
-          <VStack align="start">
-            <MenuLinks isDesktop={false} onClose={onClose} />
-          </VStack>
-        </Drawer.Body>
-      </Drawer.Content>
-    </Drawer.Root>
-  )
-}
+  const signing = useRef(false)
 
-function MenuLinks({ isDesktop, onClose }: { isDesktop: boolean; onClose?: () => void }) {
   const router = useRouter()
+  const pathname = usePathname()
 
-  const handleClick = (route: string, onClose?: () => void) => {
-    router.push(route)
-    if (onClose) {
-      onClose()
+  useEffect(() => {
+    if (sessionStatus === 'authenticated' && pathname === '/') {
+      router.replace('/play')
+    }
+  }, [pathname, router, sessionStatus])
+
+  useEffect(() => {
+    if (sessionStatus === 'loading') return
+
+    if (!connected || !publicKey) {
+      signing.current = false
+      return
+    }
+
+    const walletAddress = publicKey.toBase58()
+    const sessionAddress = session?.user?.address
+
+    if (sessionAddress === walletAddress) return
+    if (signing.current) return
+
+    let cancelled = false
+    signing.current = true
+
+    const signConnectionMessage = async () => {
+      try {
+        if (!signMessage) {
+          throw new Error('Wallet does not support message signing')
+        }
+
+        const nonce = (() => {
+          if (typeof crypto !== 'undefined') {
+            if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+            if (typeof crypto.getRandomValues === 'function') {
+              const bytes = new Uint8Array(16)
+              crypto.getRandomValues(bytes)
+              return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+            }
+          }
+          return Math.random().toString(36).slice(2)
+        })()
+
+        const issuedAt = new Date().toISOString()
+        const message = `Sign in to Arising\nWallet: ${walletAddress}\nNonce: ${nonce}\nIssued At: ${issuedAt}`
+        const encodedMessage = new TextEncoder().encode(message)
+        const signed = await signMessage(encodedMessage)
+
+        if (cancelled) return
+
+        const result = await signIn('solana', {
+          publicKey: walletAddress,
+          signature: bs58.encode(signed),
+          message,
+          nonce,
+          redirect: false
+        })
+
+        if (!result || result.error || result.ok === false) {
+          throw new Error(result?.error ?? 'Unknown authentication error')
+        }
+
+        router.replace('/play')
+      } catch (error) {
+        console.error('Wallet signature/auth failed, disconnecting', error)
+        if (!cancelled) {
+          try {
+            await disconnect()
+          } catch (disconnectError) {
+            console.error('Error disconnecting after failed signature', disconnectError)
+          }
+        }
+      } finally {
+        signing.current = false
+      }
+    }
+
+    void signConnectionMessage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [connected, disconnect, publicKey, session?.user?.address, sessionStatus, signMessage])
+
+  const handleSignOut = async () => {
+    try {
+      await disconnect()
+    } catch (error) {
+      console.error('Failed to disconnect wallet on sign out', error)
+    } finally {
+      const result = await signOut({ callbackUrl: '/', redirect: false })
+      if (result?.url) {
+        router.replace(result.url)
+      } else {
+        router.replace('/')
+      }
     }
   }
 
-  return (
-    <>
-      {HEADER_LINKS.map((link) => (
-        <Box key={link.title} padding={1} width={!isDesktop ? '200px' : ''}>
-          <AppLink href={link.href}>
-            <Button
-              aria-label={`Navigate to ${link.item.toLowerCase()}`}
-              _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
-              background="black"
-              color="custom-blue"
-              size="sm"
-              onClick={() => handleClick(link.href, onClose)}
-            >
-              <Text
-                fontSize="sm"
-                fontWeight="bold"
-                letterSpacing="1px"
-                margin={0}
-                padding={0}
-                rounded="md"
-                textAlign={!isDesktop ? 'center' : 'left'}
-                width="full"
-              >
-                {link.item}
-              </Text>
-            </Button>
-          </AppLink>
-        </Box>
-      ))}
-    </>
-  )
-}
-
-export function SiteHeader() {
-  const [open, setOpen] = useState(false)
-
-  const mobile = useBreakpointValue({ base: true, lg: false })
-
-  const handleClose = () => {
-    setOpen(false)
-  }
+  const isAuthed = Boolean(session?.user?.address)
 
   return (
     <Stack as="header" margin="0 !important" position="absolute" top={0} width="full" zIndex="100">
-      <SideMenu open={open} onClose={handleClose} />
-      <HStack direction="row" justify="space-between" marginX="10" marginY="2">
+      <HStack align="center" justify="space-between" paddingX={{ base: 4, md: 10 }} paddingY={{ base: 3, md: 2 }}>
         <Flex alignItems="center" height="80px" width="40px">
           <AppLink href="/">
             <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.webp" width="484" priority />
           </AppLink>
         </Flex>
-        <HStack justify="right">
-          {!mobile && <MenuLinks isDesktop />}
 
-          {mobile && (
-            <Button
-              aria-label="Toggle navigation menu"
-              _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
-              background="black"
-              color="custom-blue"
-              size="sm"
-              width="40px"
-              onClick={() => setOpen(true)}
-            >
-              <BarsIcon height="10" width="10" />
-            </Button>
-          )}
-        </HStack>
+        {isAuthed && (
+          <Button
+            onClick={handleSignOut}
+            background="black"
+            color="custom-blue"
+            _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
+            size="sm"
+          >
+            <Text fontWeight="600">Sign out</Text>
+          </Button>
+        )}
       </HStack>
     </Stack>
   )

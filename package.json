@@ -12,12 +12,24 @@
   },
   "dependencies": {
     "@chakra-ui/react": "3.29.0",
+    "@emotion/cache": "11.14.0",
     "@emotion/react": "11.14.0",
-    "@vercel/analytics": "^1.5.0",
+    "@solana/wallet-adapter-backpack": "0.1.14",
+    "@solana/wallet-adapter-base": "0.9.27",
+    "@solana/wallet-adapter-phantom": "0.9.28",
+    "@solana/wallet-adapter-react": "0.15.39",
+    "@solana/wallet-adapter-react-ui": "0.9.39",
+    "@solana/wallet-adapter-solflare": "0.6.32",
+    "@solana/wallet-adapter-torus": "0.11.32",
+    "@solana/web3.js": "1.98.4",
+    "@vercel/analytics": "1.5.0",
     "animate.css": "4.1.1",
+    "bs58": "6.0.0",
     "next": "16.0.3",
+    "next-auth": "4.24.13",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "tweetnacl": "1.0.3"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.5",

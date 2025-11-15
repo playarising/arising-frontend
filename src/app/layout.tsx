@@ -2,7 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Cinzel, Montserrat } from 'next/font/google'
 import { SiteHeader, StructuredData } from '@/components'
-import { ThemeProvider } from '@/providers'
+import { Providers } from '@/providers'
 
 const MONTSERRAT = Montserrat({ variable: '--font-montserrat', subsets: ['latin', 'latin-ext'] })
 const CINZEL = Cinzel({ variable: '--font-cinzel', subsets: ['latin'], weight: ['400'] })
@@ -114,13 +114,13 @@ export default function RootLayout({
         <StructuredData canonicalUrl={SITE_URL} />
         <Analytics />
       </head>
-      <body>
-        <ThemeProvider>
+      <body suppressHydrationWarning>
+        <Providers>
           <main style={{ position: 'relative', overflowX: 'hidden' }}>
             <SiteHeader />
             {children}
           </main>
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   )

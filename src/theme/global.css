@@ -34,3 +34,7 @@ h4,
 h5 {
   font-family: var(--font-cinzel);
 }
+
+.wallet-adapter-modal-title {
+  font-family: "DM Sans", "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}

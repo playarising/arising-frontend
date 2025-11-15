@@ -3,11 +3,8 @@
 import { Box, Center, Container as ChakraContainer, Stack, type StackProps } from '@chakra-ui/react'
 import Image from 'next/image'
 
-import { SiteFooter } from './SiteFooter'
-
 export interface PageContainerProps extends StackProps {
   children: React.ReactNode
-  showFooter?: boolean
   withBackground?: boolean
   bgOpacity?: string | number
   image?: string
@@ -17,7 +14,6 @@ export interface PageContainerProps extends StackProps {
 
 export function PageContainer({
   children,
-  showFooter = true,
   withBackground = true,
   bgOpacity = '70%',
   image = '/assets/backgrounds/map.webp',
@@ -51,7 +47,6 @@ export function PageContainer({
       <Center height="100dvh" width="full">
         {children}
       </Center>
-      {showFooter && <SiteFooter />}
     </Stack>
   )
 }
