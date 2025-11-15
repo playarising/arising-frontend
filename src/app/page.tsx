@@ -49,7 +49,7 @@ export default function HomePage() {
           fontSize={{ base: 'md', md: 'lg' }}
           maxWidth={{ base: '300px', md: '640px' }}
         >
-          Summon, craft, fight, and forge your adventure in Etia’s living web3 role-playing saga.
+          Every choice becomes history. Etia is the on-chain RPG that never forgets.
         </Text>
 
         <Box className="animate_delay animate__animated animate__delay-5s animate__fadeIn animate__slow" paddingY={5}>

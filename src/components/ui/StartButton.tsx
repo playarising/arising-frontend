@@ -2,20 +2,19 @@
 
 import { Flex, Text } from '@chakra-ui/react'
 import Image from 'next/image'
-
 import { AppLink } from '../navigation'
 
 export function StartButton() {
   return (
-    <AppLink aria-label="Begin your journey in Arising" href="/play" style={{ display: 'inline-flex' }}>
-      <Flex cursor="pointer" paddingBottom={24} position="relative" width="498px" height="90px">
+    <AppLink href="/play">
+      <Flex cursor="pointer" paddingBottom={24} position="relative" role="button" tabIndex={-1} width="250px">
         <Flex
           flexDirection="row"
           fontSize={20}
           justifyContent="center"
           position="absolute"
           top="7px"
-          width="498px"
+          width="full"
           zIndex={5}
         >
           <Text color="white" fontWeight="600">
@@ -25,9 +24,9 @@ export function StartButton() {
         <Image
           alt="Enter the story of Etia"
           height="90"
-          priority
           src="/assets/backgrounds/start-button.webp"
           width="498"
+          priority
         />
       </Flex>
     </AppLink>

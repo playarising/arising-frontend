@@ -1,1 +1,1 @@
-export * from "./Bars"
+export * from './Bars'
