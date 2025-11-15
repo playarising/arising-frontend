@@ -99,7 +99,7 @@ export function SiteHeader() {
     return () => {
       cancelled = true
     }
-  }, [connected, disconnect, publicKey, session?.user?.address, sessionStatus, signMessage])
+  }, [connected, disconnect, publicKey, session?.user?.address, sessionStatus, signMessage, router.replace])
 
   const handleSignOut = async () => {
     try {
