@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next"
 import type { Metadata, Viewport } from 'next'
 import { Cinzel, Montserrat } from 'next/font/google'
 import { SiteHeader, StructuredData } from '@/components'
@@ -111,6 +112,7 @@ export default function RootLayout({
     <html lang="en" className={`${MONTSERRAT.variable} ${CINZEL.variable}`} suppressHydrationWarning>
       <head>
         <StructuredData canonicalUrl={SITE_URL} />
+        <Analytics />
       </head>
       <body>
         <ThemeProvider>

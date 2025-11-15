@@ -7,18 +7,15 @@ import { AppLink } from '../navigation'
 
 export function StartButton() {
   return (
-    <AppLink
-      aria-label="Begin your journey in Arising"
-      href="/play"
-    >
-      <Flex cursor="pointer" paddingBottom={24} position="relative" width="full">
+    <AppLink aria-label="Begin your journey in Arising" href="/play" style={{ display: 'inline-flex' }}>
+      <Flex cursor="pointer" paddingBottom={24} position="relative" width="498px" height="90px">
         <Flex
           flexDirection="row"
           fontSize={20}
           justifyContent="center"
           position="absolute"
           top="7px"
-          width="full"
+          width="498px"
           zIndex={5}
         >
           <Text color="white" fontWeight="600">
