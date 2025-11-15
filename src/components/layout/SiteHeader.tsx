@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { BarsIcon } from '../Icons'
+import { BarsIcon } from '../icons'
 import { AppLink } from '../navigation'
 
 const HEADER_LINKS = [
