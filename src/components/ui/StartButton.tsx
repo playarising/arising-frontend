@@ -10,7 +10,6 @@ export function StartButton() {
     <AppLink
       aria-label="Begin your journey in Arising"
       href="/play"
-      style={{ display: 'inline-flex', textDecoration: 'none', width: '250px' }}
     >
       <Flex cursor="pointer" paddingBottom={24} position="relative" width="full">
         <Flex
