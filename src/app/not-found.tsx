@@ -1,5 +1,5 @@
-import { AppLink, PageContainer } from '@/components'
 import { Box, Heading, Text, VStack } from '@chakra-ui/react'
+import { AppLink, PageContainer } from '@/components'
 
 export default function NotFound() {
   return (

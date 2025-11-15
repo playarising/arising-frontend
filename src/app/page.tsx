@@ -1,6 +1,6 @@
-import { PageContainer, StartButton } from '@/components'
 import { Box, Heading, Text, VStack } from '@chakra-ui/react'
 import Image from 'next/image'
+import { PageContainer, StartButton } from '@/components'
 
 export default function HomePage() {
   return (

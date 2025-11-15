@@ -1,6 +1,6 @@
 'use client'
 
-import { type HTMLChakraProps, chakra } from '@chakra-ui/react'
+import { chakra, type HTMLChakraProps } from '@chakra-ui/react'
 
 export function HomeIcon(props: HTMLChakraProps<'svg'>) {
   return (

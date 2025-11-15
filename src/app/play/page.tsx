@@ -1,6 +1,6 @@
-import { PageContainer } from '@/components'
 import { Box, VisuallyHidden } from '@chakra-ui/react'
 import type { Metadata } from 'next'
+import { PageContainer } from '@/components'
 
 export const metadata: Metadata = {
   title: 'Play Arising',
