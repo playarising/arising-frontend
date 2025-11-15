@@ -1,4 +1,4 @@
-export * from './icons'
+export * from './Icons'
 export * from './layout'
 export * from './navigation'
 export * from './seo'
