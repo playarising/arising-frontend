@@ -104,7 +104,7 @@ export function SiteHeader() {
       <HStack direction="row" justify="space-between" marginX="10" marginY="2">
         <Flex alignItems="center" height="80px" width="40px">
           <AppLink href="/">
-            <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.png" width="484" priority />
+            <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.webp" width="484" priority />
           </AppLink>
         </Flex>
         <HStack justify="right">
