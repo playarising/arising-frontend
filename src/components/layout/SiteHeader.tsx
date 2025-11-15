@@ -1,35 +1,30 @@
 'use client'
 
-import Image from 'next/image'
-import NextImage from 'next/image'
-import { useRouter } from 'next/navigation'
 
-import { Link } from '@/components'
-import { Box, Button, Drawer, Flex, HStack, Stack, Text, VStack, useBreakpointValue } from '@chakra-ui/react'
+import { Box, Button, Drawer, Flex, HStack, Stack, Text, useBreakpointValue, VStack } from '@chakra-ui/react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { BarsIcon, TwitterIcon } from '../Icons'
+
+import { BarsIcon } from '../icons'
+import { AppLink } from '../navigation'
+
+const HEADER_LINKS = [
+  { href: '/', item: 'HOME', title: 'home' },
+  { href: '/play', item: 'PLAY', title: 'play' }
+]
 
 function SideMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Drawer.Root open={open} size="full" onExitComplete={onClose}>
       <Drawer.Backdrop />
       <Drawer.Content background="custom-dark-primary" position="relative">
-        <Box opacity="30%" position="absolute" right="-80px" top="0">
-          <NextImage
-            alt="Ard Noble"
-            height="768"
-            src="/assets/backgrounds/ard-noble.png"
-            style={{ objectFit: 'contain' }}
-            width="421"
-            priority
-          />
-        </Box>
         <Drawer.Header>
           <HStack align="center" direction="row" justify="space-between" marginX="2">
             <Flex alignItems="center" width="40px">
-              <Link href="/">
-                <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.png" width="484" />
-              </Link>
+              <AppLink href="/">
+                <Image alt="Arising Logo Top" height="768" src="/assets/logo.webp" width="484" />
+              </AppLink>
             </Flex>
             <Drawer.CloseTrigger
               _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
@@ -46,54 +41,13 @@ function SideMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
             <MenuLinks isDesktop={false} onClose={onClose} />
           </VStack>
         </Drawer.Body>
-
-        <Drawer.Footer paddingY={10}>
-          <VStack align="left" width="full">
-            <HStack justifyContent="left" gap="2" width="full">
-              <MenuButtons />
-            </HStack>
-          </VStack>
-        </Drawer.Footer>
       </Drawer.Content>
     </Drawer.Root>
   )
 }
 
-function MenuButtons() {
-  return (
-    <>
-      <Link href="https://twitter.com/playarising" isExternal>
-        <Button
-          _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
-          background="black"
-          color="custom-blue"
-          height="32px"
-          paddingX="0"
-        >
-          <TwitterIcon height={5} width={5} />
-        </Button>
-      </Link>
-    </>
-  )
-}
-
 function MenuLinks({ isDesktop, onClose }: { isDesktop: boolean; onClose?: () => void }) {
   const router = useRouter()
-
-  const headerLinks = [
-    { href: '/', item: 'HOME', title: 'home' },
-    {
-      href: '/civilizations',
-      item: 'CIVILIZATIONS',
-      title: 'civilizations'
-    },
-    {
-      href: '/explore',
-      item: 'EXPLORE',
-      title: 'explore'
-    },
-    { href: '/play', item: 'PLAY', title: 'play' }
-  ]
 
   const handleClick = (route: string, onClose?: () => void) => {
     router.push(route)
@@ -104,10 +58,11 @@ function MenuLinks({ isDesktop, onClose }: { isDesktop: boolean; onClose?: () =>
 
   return (
     <>
-      {headerLinks.map((link) => (
+      {HEADER_LINKS.map((link) => (
         <Box key={link.title} padding={1} width={!isDesktop ? '200px' : ''}>
-          <Link href={link.href}>
+          <AppLink href={link.href}>
             <Button
+              aria-label={`Navigate to ${link.item.toLowerCase()}`}
               _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
               background="black"
               color="custom-blue"
@@ -127,14 +82,14 @@ function MenuLinks({ isDesktop, onClose }: { isDesktop: boolean; onClose?: () =>
                 {link.item}
               </Text>
             </Button>
-          </Link>
+          </AppLink>
         </Box>
       ))}
     </>
   )
 }
 
-export function Header() {
+export function SiteHeader() {
   const [open, setOpen] = useState(false)
 
   const mobile = useBreakpointValue({ base: true, lg: false })
@@ -144,24 +99,20 @@ export function Header() {
   }
 
   return (
-    <Stack margin="0 !important" position="absolute" top={0} width="full" zIndex="100">
+    <Stack as="header" margin="0 !important" position="absolute" top={0} width="full" zIndex="100">
       <SideMenu open={open} onClose={handleClose} />
       <HStack direction="row" justify="space-between" marginX="10" marginY="2">
         <Flex alignItems="center" height="80px" width="40px">
-          <Link href="/">
+          <AppLink href="/">
             <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.png" width="484" priority />
-          </Link>
+          </AppLink>
         </Flex>
         <HStack justify="right">
-          {!mobile && (
-            <>
-              <MenuLinks isDesktop />
-              <MenuButtons />
-            </>
-          )}
+          {!mobile && <MenuLinks isDesktop />}
 
           {mobile && (
             <Button
+              aria-label="Toggle navigation menu"
               _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
               background="black"
               color="custom-blue"

@@ -2,9 +2,9 @@
 
 import { HStack, Text } from '@chakra-ui/react'
 
-import { Link } from '../Link'
+import { AppLink } from '../navigation'
 
-export function Footer() {
+export function SiteFooter() {
   return (
     <HStack
       align="center"
@@ -17,11 +17,11 @@ export function Footer() {
       width="full"
       zIndex="100"
     >
-      <Link href="https://kindynos.mx" isExternal>
+      <AppLink href="https://kindynos.mx" isExternal>
         <Text textAlign="center" color="custom-blue" fontSize="sm">
           © {new Date().getFullYear()}, Grupo Kindynos.
         </Text>
-      </Link>
+      </AppLink>
     </HStack>
   )
 }

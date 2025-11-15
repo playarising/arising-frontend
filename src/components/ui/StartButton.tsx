@@ -1,11 +1,20 @@
 'use client'
 
 import { Flex, Text } from '@chakra-ui/react'
-import NextImage from 'next/image'
+import Image from 'next/image'
 
 export function StartButton() {
   return (
-    <Flex cursor="disabled" paddingBottom={24} position="relative" width="250px" opacity="0.5">
+    <Flex
+      aria-disabled="true"
+      cursor="not-allowed"
+      opacity="0.5"
+      paddingBottom={24}
+      position="relative"
+      role="button"
+      tabIndex={-1}
+      width="250px"
+    >
       <Flex
         flexDirection="row"
         fontSize={20}
@@ -19,7 +28,13 @@ export function StartButton() {
           START
         </Text>
       </Flex>
-      <NextImage alt="Enter the story of Etia" height="90" src="/assets/backgrounds/start-button.png" width="498" />
+      <Image
+        alt="Enter the story of Etia"
+        height="90"
+        src="/assets/backgrounds/start-button.webp"
+        width="498"
+        priority
+      />
     </Flex>
   )
 }

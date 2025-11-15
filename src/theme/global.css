@@ -7,7 +7,7 @@
 }
 
 .__react_modal_image__header {
-  height: 50px !important;
+  height: 50px;
 }
 
 .__react_modal_image__icon_menu {
@@ -16,15 +16,15 @@
 }
 
 .swiper-button-next {
-  color: #57e1ec !important;
+  color: #57e1ec;
 }
 
 .swiper-button-prev {
-  color: #57e1ec !important;
+  color: #57e1ec;
 }
 
 .swiper-pagination-bullet {
-  background: #57e1ec !important;
+  background: #57e1ec;
 }
 
 h1,

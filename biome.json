@@ -1,91 +1,60 @@
 {
-    "files": {
-      "maxSize": 10485760,
-      "ignore": ["node_modules", ".next"]
-    },
-    "organizeImports": {
-      "enabled": true
-    },
-    "formatter": {
-      "enabled": true,
-      "formatWithErrors": false,
-      "indentStyle": "space",
-      "indentWidth": 2,
-      "lineWidth": 120
-    },
-    "javascript": {
-      "formatter": {
-        "quoteStyle": "single",
-        "trailingCommas": "none",
-        "semicolons": "asNeeded"
-      }
-    },
-    "linter": {
-      "enabled": true,
-      "rules": {
-        "suspicious": {
-          "noArrayIndexKey": "off",
-          "noConsoleLog": "error",
-          "noEmptyBlockStatements": "error",
-          "useAwait": "error",
-          "noDuplicateJsxProps": "error"
-        },
-        "a11y": {
-          "useSemanticElements": "error"
-        },
-        "correctness": {
-          "noUnusedImports": "error",
-          "noUnusedVariables": "error",
-          "noUnusedFunctionParameters": "error",
-          "useHookAtTopLevel": "error"
-        },
-        "nursery": {
-          "noDuplicateElseIf": "error",
-          "useSortedClasses": "error"
-        },
-        "style": {
-          "useConst": "error",
-          "useFilenamingConvention": {
-            "level": "error",
-            "options": {
-              "filenameCases": ["camelCase", "PascalCase"]
-            }
-          },
-          "useNamingConvention": {
-            "level": "error",
-            "options": {
-              "strictCase": false,
-              "conventions": [
-                {
-                  "selector": {
-                    "kind": "interface"
-                  },
-                  "match": "I(.+)"
-                },
-                {
-                  "selector": {
-                    "kind": "const",
-                    "scope": "global"
-                  },
-                  "formats": ["CONSTANT_CASE"]
-                },
-                {
-                  "selector": {
-                    "kind": "variable"
-                  },
-                  "formats": ["camelCase"]
-                },
-                {
-                  "selector": {
-                    "kind": "functionParameter"
-                  },
-                  "formats": ["camelCase"]
-                }
-              ]
-            }
-          }
-        },
-        "recommended": true
+  "$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
+  "files": {
+    "maxSize": 10485760
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
       }
     }
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "none",
+      "semicolons": "asNeeded"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "suspicious": {
+        "noArrayIndexKey": "off",
+        "noConsole": {
+          "level": "error",
+          "options": {
+            "allow": ["warn", "error"]
+          }
+        },
+        "noEmptyBlockStatements": "error",
+        "useAwait": "error",
+        "noDuplicateJsxProps": "error"
+      },
+      "a11y": {
+        "useSemanticElements": "error"
+      },
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "noUnusedFunctionParameters": "error",
+        "useHookAtTopLevel": "error"
+      },
+      "nursery": {
+        "useSortedClasses": "error"
+      },
+      "style": {
+        "useConst": "error"
+      },
+      "recommended": true
+    }
   }
+}

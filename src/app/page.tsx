@@ -1,46 +1,61 @@
-'use client'
-
-import { Container, StartButton } from '@/components'
-import { Box, Heading, VStack } from '@chakra-ui/react'
+import { PageContainer, StartButton } from '@/components'
+import { Box, Heading, Text, VStack } from '@chakra-ui/react'
 import Image from 'next/image'
 
-export default function Page() {
+export default function HomePage() {
   return (
-    <Container>
-      <VStack alignItems="center" h="full" justifyContent="center" mx="auto" w="full" zIndex={20}>
+    <PageContainer>
+      <VStack
+        alignItems="center"
+        as="section"
+        gap={6}
+        height="full"
+        justifyContent="center"
+        marginX="auto"
+        textAlign="center"
+        width="full"
+        zIndex={20}
+      >
         <Box
+          as="header"
           className="animate_delay animate__animated animate__fadeIn animate__slower"
-          maxWidth={{ base: 400, md: 800 }}
+          maxWidth={{ base: 320, md: 640 }}
+          width="full"
         >
           <Image
-            alt="Arsing: A Twirld of Destinies"
-            className="object-fill"
-            height="288"
-            src="/assets/logo.png"
-            width="870"
+            alt="Arising: A Twirl of Destinies"
+            className="object-contain"
+            height={288}
             priority
+            sizes="(max-width: 768px) 320px, 640px"
+            src="/assets/logo.webp"
+            width={870}
           />
         </Box>
-        <Box
+
+        <Heading
+          as="h1"
           className="animate__animated animate_delay animate__delay-3s animate__fadeIn animate__slow"
           color="custom-blue"
+          fontSize={{ base: '3xl', md: '5xl' }}
         >
-          <Heading size={{ base: '2xl', md: '5xl' }}>A Twirl of Destinies</Heading>
-        </Box>
-        <Box
+          A Twirl of Destinies
+        </Heading>
+
+        <Text
+          as="p"
           className="animate_delay animate__animated animate__delay-4s animate__fadeIn animate__slow"
           color="white"
-          fontSize={{ base: 'md', md: 'xl' }}
-          maxWidth={{ base: '300px', md: '700px' }}
-          paddingY="2"
-          textAlign="center"
+          fontSize={{ base: 'md', md: 'lg' }}
+          maxWidth={{ base: '300px', md: '640px' }}
         >
-          Summon, craft, fight, and forge your adventure!
-        </Box>
-        <Box className="animate_delay animate__animated animate__delay-5s animate__fadeIn animate__slow" paddingY="5">
+          Summon, craft, fight, and forge your adventure in Etia’s living web3 role-playing saga.
+        </Text>
+
+        <Box className="animate_delay animate__animated animate__delay-5s animate__fadeIn animate__slow" paddingY={5}>
           <StartButton />
         </Box>
       </VStack>
-    </Container>
+    </PageContainer>
   )
 }
