@@ -20,7 +20,7 @@ export function PageContainer({
   showFooter = true,
   withBackground = true,
   bgOpacity = '70%',
-  image = '/assets/backgrounds/map.jpg',
+  image = '/assets/backgrounds/map.webp',
   overlayColor = 'black',
   fallbackBackground = 'custom-dark-primary',
   ...rest

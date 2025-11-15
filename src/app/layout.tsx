@@ -84,7 +84,7 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     site: '@playarising',
     creator: '@playarising',
-    images: ['/assets/opengraph.jpeg']
+    images: ['/assets/opengraph.webp']
   },
   appLinks: {
     web: {
