@@ -103,6 +103,9 @@ type AccountsList = { pubkey: PublicKey; isWritable: boolean; isSigner: boolean 
 const MINT_STATE_SEED = Buffer.from('character_mint_state')
 const COLLECTION_MINT_SEED = Buffer.from('collection_mint')
 const COLLECTION_TOKEN_SEED = Buffer.from('collection_token')
+const CHARACTER_SEED = Buffer.from('character')
+const CHARACTER_NFT_MINT_SEED = Buffer.from('character_nft_mint')
+const CHARACTER_NFT_TOKEN_SEED = Buffer.from('character_nft_token')
 
 export const findMintStatePda = (programId = ARISING_PROGRAM_ID) =>
   PublicKey.findProgramAddressSync([MINT_STATE_SEED], programId)[0]
@@ -122,6 +125,36 @@ export const findCollectionTokenAccountPda = (
     ASSOCIATED_TOKEN_PROGRAM_ID,
   )[0]
 }
+
+export const findCharacterPda = (
+  civilizationIndex: number,
+  characterId: number,
+  programId: PublicKey = ARISING_PROGRAM_ID,
+) =>
+  PublicKey.findProgramAddressSync(
+    [CHARACTER_SEED, Buffer.from([civilizationIndex]), u16(characterId)],
+    programId,
+  )[0]
+
+export const findCharacterMintPda = (
+  civilizationIndex: number,
+  characterId: number,
+  programId: PublicKey = ARISING_PROGRAM_ID,
+) =>
+  PublicKey.findProgramAddressSync(
+    [CHARACTER_NFT_MINT_SEED, Buffer.from([civilizationIndex]), u16(characterId)],
+    programId,
+  )[0]
+
+export const findCharacterTokenPda = (
+  civilizationIndex: number,
+  characterId: number,
+  programId: PublicKey = ARISING_PROGRAM_ID,
+) =>
+  PublicKey.findProgramAddressSync(
+    [CHARACTER_NFT_TOKEN_SEED, Buffer.from([civilizationIndex]), u16(characterId)],
+    programId,
+  )[0]
 
 const u8 = (value: number) => {
   const buf = Buffer.alloc(1)
@@ -436,12 +469,12 @@ export const initializeIx = (
 export const mintCharacterIx = (
   args: { civilization: Civilization; characterId: number; gender: Gender },
   accounts: {
-    character: PublicKey
+    character?: PublicKey
     authority: PublicKey
     mintAuthority: PublicKey
     mintState?: PublicKey
-    characterMint: PublicKey
-    characterTokenAccount: PublicKey
+    characterMint?: PublicKey
+    characterTokenAccount?: PublicKey
     metadata: PublicKey
     masterEdition: PublicKey
     collectionMint: PublicKey
@@ -458,12 +491,38 @@ export const mintCharacterIx = (
     DISCRIMINATORS.mint_character,
     Buffer.concat([encodeCivilization(args.civilization), u16(args.characterId), encodeGender(args.gender)]),
     [
-      { pubkey: accounts.character, isWritable: true, isSigner: false },
+      {
+        pubkey:
+          accounts.character ??
+          findCharacterPda(typeof args.civilization === 'number' ? args.civilization : CIVILIZATION[args.civilization], args.characterId, programId),
+        isWritable: true,
+        isSigner: false,
+      },
       { pubkey: accounts.authority, isWritable: true, isSigner: true },
       { pubkey: accounts.mintState ?? findMintStatePda(programId), isWritable: true, isSigner: false },
       { pubkey: accounts.mintAuthority, isWritable: false, isSigner: true },
-      { pubkey: accounts.characterMint, isWritable: true, isSigner: false },
-      { pubkey: accounts.characterTokenAccount, isWritable: true, isSigner: false },
+      {
+        pubkey:
+          accounts.characterMint ??
+          findCharacterMintPda(
+            typeof args.civilization === 'number' ? args.civilization : CIVILIZATION[args.civilization],
+            args.characterId,
+            programId,
+          ),
+        isWritable: true,
+        isSigner: false,
+      },
+      {
+        pubkey:
+          accounts.characterTokenAccount ??
+          findCharacterTokenPda(
+            typeof args.civilization === 'number' ? args.civilization : CIVILIZATION[args.civilization],
+            args.characterId,
+            programId,
+          ),
+        isWritable: true,
+        isSigner: false,
+      },
       { pubkey: accounts.metadata, isWritable: true, isSigner: false },
       { pubkey: accounts.masterEdition, isWritable: true, isSigner: false },
       { pubkey: accounts.collectionMint, isWritable: true, isSigner: false },

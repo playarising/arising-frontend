@@ -4,22 +4,15 @@ import { Buffer } from 'node:buffer'
 import { Box, Button, Stack, Text, chakra } from '@chakra-ui/react'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
-import {
-  type Connection,
-  Keypair,
-  PublicKey,
-  SYSVAR_RENT_PUBKEY,
-  SystemProgram,
-  Transaction,
-  TransactionInstruction
-} from '@solana/web3.js'
+import { PublicKey, Transaction } from '@solana/web3.js'
 import { useState } from 'react'
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  findMintStatePda,
-  mintCharacterIx,
   TOKEN_METADATA_PROGRAM_ID,
-  TOKEN_PROGRAM_ID
+  findCharacterMintPda,
+  findCharacterPda,
+  findCharacterTokenPda,
+  findMintStatePda,
+  mintCharacterIx
 } from '@/lib/arising'
 
 type Status =
@@ -51,26 +44,8 @@ const deriveMasterEditionPda = (mint: PublicKey) =>
     TOKEN_METADATA_PROGRAM_ID
   )[0]
 
-const deriveAta = (mint: PublicKey, owner: PublicKey) =>
-  PublicKey.findProgramAddressSync(
-    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0]
-
-const u16le = (value: number) => {
-  const buf = Buffer.alloc(2)
-  buf.writeUInt16LE(value)
-  return buf
-}
-
-// Guess at character PDA seeds: update if your program uses different seeds.
-const deriveCharacterPda = (civilizationIndex: number, characterId: number, programId: PublicKey) =>
-  PublicKey.findProgramAddressSync(
-    [Buffer.from('character'), Buffer.from([civilizationIndex]), u16le(characterId)],
-    programId
-  )[0]
-
 type MintState = {
+  authority: PublicKey
   collectionMint: PublicKey
   collectionMetadata: PublicKey
   collectionMasterEdition: PublicKey
@@ -80,7 +55,8 @@ type MintState = {
 const parseMintState = (data: Buffer): MintState => {
   // Anchor adds 8-byte account discriminator.
   let offset = 8
-  offset += 32 // authority
+  const authority = new PublicKey(data.slice(offset, offset + 32))
+  offset += 32
   offset += 1 // bump
   const collectionMint = new PublicKey(data.slice(offset, offset + 32))
   offset += 32
@@ -99,53 +75,8 @@ const parseMintState = (data: Buffer): MintState => {
     nextIds.push(nextId)
   }
 
-  return { collectionMint, collectionMetadata, collectionMasterEdition, nextIds }
+  return { authority, collectionMint, collectionMetadata, collectionMasterEdition, nextIds }
 }
-
-const createMintAccountIx = async (connection: Connection, payer: PublicKey, mint: Keypair) => {
-  const space = 82
-  const lamports = await connection.getMinimumBalanceForRentExemption(space)
-  return SystemProgram.createAccount({
-    fromPubkey: payer,
-    newAccountPubkey: mint.publicKey,
-    lamports,
-    space,
-    programId: TOKEN_PROGRAM_ID
-  })
-}
-
-const initializeMintIx = (mint: PublicKey, mintAuthority: PublicKey) => {
-  const data = Buffer.alloc(67)
-  data.writeUInt8(0, 0) // InitializeMint instruction
-  data.writeUInt8(0, 1) // decimals = 0
-  mintAuthority.toBuffer().copy(data, 2)
-  data.writeUInt8(1, 34) // freeze authority present
-  mintAuthority.toBuffer().copy(data, 35)
-
-  return new TransactionInstruction({
-    programId: TOKEN_PROGRAM_ID,
-    keys: [
-      { pubkey: mint, isSigner: false, isWritable: true },
-      { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false }
-    ],
-    data
-  })
-}
-
-const createAtaIx = (payer: PublicKey, ata: PublicKey, owner: PublicKey, mint: PublicKey) =>
-  new TransactionInstruction({
-    programId: ASSOCIATED_TOKEN_PROGRAM_ID,
-    keys: [
-      { pubkey: payer, isSigner: true, isWritable: true },
-      { pubkey: ata, isSigner: false, isWritable: true },
-      { pubkey: owner, isSigner: false, isWritable: false },
-      { pubkey: mint, isSigner: false, isWritable: false },
-      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-      { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false }
-    ],
-    data: Buffer.alloc(0)
-  })
 
 export function PlayContent() {
   const { connection } = useConnection()
@@ -172,16 +103,16 @@ export function PlayContent() {
       const civIndex = CIV_INDEX[civilization]
       const nextId = mintState.nextIds[civIndex] ?? 0
 
-      const mint = Keypair.generate()
-      const characterMint = mint.publicKey
-      const characterTokenAccount = deriveAta(characterMint, publicKey)
-      const characterAccount = deriveCharacterPda(civIndex, nextId, mintStatePda)
+      if (!mintState.authority.equals(publicKey)) {
+        setStatus({ state: 'error', message: 'Only the mint authority can mint characters.' })
+        return
+      }
+
+      const characterMint = findCharacterMintPda(civIndex, nextId, mintStatePda)
+      const characterTokenAccount = findCharacterTokenPda(civIndex, nextId, mintStatePda)
+      const characterAccount = findCharacterPda(civIndex, nextId, mintStatePda)
       const metadata = deriveMetadataPda(characterMint)
       const masterEdition = deriveMasterEditionPda(characterMint)
-
-      const createMintIx = await createMintAccountIx(connection, publicKey, mint)
-      const initMintIx = initializeMintIx(characterMint, publicKey)
-      const createAta = createAtaIx(publicKey, characterTokenAccount, publicKey, characterMint)
 
       const mintIx = mintCharacterIx(
         { civilization: civIndex, characterId: nextId, gender: 'Male' },
@@ -200,8 +131,8 @@ export function PlayContent() {
         }
       )
 
-      const tx = new Transaction().add(createMintIx, initMintIx, createAta, mintIx)
-      const signature = await sendTransaction(tx, connection, { signers: [mint] })
+      const tx = new Transaction().add(mintIx)
+      const signature = await sendTransaction(tx, connection)
       setStatus({ state: 'success', signature })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
@@ -236,8 +167,8 @@ export function PlayContent() {
         </Text>
 
         <Text color="gray.300" fontSize="sm">
-          Pick a civilization and we handle the rest: fetch next id from on-chain mint state, derive PDAs, create the
-          mint + ATA, and send the mint_character instruction.
+          Pick a civilization and we handle the rest: fetch next id from on-chain mint state, derive program PDAs, and
+          send the mint_character instruction (requires the mint authority wallet).
         </Text>
 
         <CivSelect
