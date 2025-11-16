@@ -1,19 +1,20 @@
 'use client'
 
 import { Buffer } from 'node:buffer'
-import { Box, Button, Stack, Text, chakra } from '@chakra-ui/react'
+import { Box, Button, chakra, Stack, Text } from '@chakra-ui/react'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
-import { PublicKey, Transaction } from '@solana/web3.js'
-import { useState } from 'react'
+import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
+import { useEffect, useState } from 'react'
 import {
-  TOKEN_METADATA_PROGRAM_ID,
   findCharacterMintPda,
   findCharacterPda,
   findCharacterTokenPda,
   findMintStatePda,
-  mintCharacterIx
-} from '@/lib/arising'
+  mintCharacterIx,
+  TOKEN_METADATA_PROGRAM_ID
+} from '@/lib'
+import { fetchCharacterMetadata, fetchCharactersForAuthority, type CharacterWithMetadata } from '@/lib/characters'
 
 type Status =
   | { state: 'idle' }
@@ -21,14 +22,15 @@ type Status =
   | { state: 'error'; message: string }
   | { state: 'submitting'; message: string }
 
-const CIVS = ['Ard', 'Hartenn', 'Ikarans', 'Zhand', 'Shinkari', 'Tarki'] as const
+const CIVS = ['Ard', 'Hartenn', "I'karan", 'Zhand', 'Shinkari', "Tark'i"] as const
+
 const CIV_INDEX: Record<(typeof CIVS)[number], number> = {
   Ard: 0,
   Hartenn: 1,
-  Ikarans: 2,
+  "I'karan": 2,
   Zhand: 3,
   Shinkari: 4,
-  Tarki: 5
+  "Tark'i": 5
 }
 const CivSelect = chakra('select')
 
@@ -80,11 +82,43 @@ const parseMintState = (data: Buffer): MintState => {
 
 export function PlayContent() {
   const { connection } = useConnection()
-  const { publicKey, sendTransaction, connected } = useWallet()
+  const { publicKey, signTransaction, connected } = useWallet()
   const { setVisible } = useWalletModal()
 
+  const [characters, setCharacters] = useState<CharacterWithMetadata[]>([])
+  const [loadingCharacters, setLoadingCharacters] = useState(false)
+  const [carouselIndex, setCarouselIndex] = useState(0)
   const [civilization, setCivilization] = useState<(typeof CIVS)[number]>('Ard')
   const [status, setStatus] = useState<Status>({ state: 'idle' })
+  const hasCharacters = characters.length > 0
+
+  useEffect(() => {
+    if (!publicKey || !connected) {
+      setCharacters([])
+      return
+    }
+    void loadCharacters(publicKey.toBase58())
+  }, [connected, publicKey])
+
+  const loadCharacters = async (owner: string) => {
+    try {
+      setLoadingCharacters(true)
+      const base = await fetchCharactersForAuthority(owner)
+      const withMeta: CharacterWithMetadata[] = await Promise.all(
+        base.map(async (c) => {
+          const metadata = await fetchCharacterMetadata(c.civilization, c.civilizationCharacterId)
+          return { ...c, metadata }
+        })
+      )
+      setCharacters(withMeta)
+      setCarouselIndex(0)
+    } catch (error) {
+      console.error('Failed to load characters', error)
+      setCharacters([])
+    } finally {
+      setLoadingCharacters(false)
+    }
+  }
 
   const handleMint = async () => {
     if (!publicKey || !connected) {
@@ -103,14 +137,9 @@ export function PlayContent() {
       const civIndex = CIV_INDEX[civilization]
       const nextId = mintState.nextIds[civIndex] ?? 0
 
-      if (!mintState.authority.equals(publicKey)) {
-        setStatus({ state: 'error', message: 'Only the mint authority can mint characters.' })
-        return
-      }
-
-      const characterMint = findCharacterMintPda(civIndex, nextId, mintStatePda)
-      const characterTokenAccount = findCharacterTokenPda(civIndex, nextId, mintStatePda)
-      const characterAccount = findCharacterPda(civIndex, nextId, mintStatePda)
+      const characterMint = findCharacterMintPda(civIndex, nextId)
+      const characterTokenAccount = findCharacterTokenPda(civIndex, nextId)
+      const characterAccount = findCharacterPda(civIndex, nextId)
       const metadata = deriveMetadataPda(characterMint)
       const masterEdition = deriveMasterEditionPda(characterMint)
 
@@ -119,7 +148,7 @@ export function PlayContent() {
         {
           character: characterAccount,
           authority: publicKey,
-          mintAuthority: publicKey,
+          mintAuthority: mintState.authority,
           mintState: mintStatePda,
           characterMint,
           characterTokenAccount,
@@ -131,9 +160,43 @@ export function PlayContent() {
         }
       )
 
-      const tx = new Transaction().add(mintIx)
-      const signature = await sendTransaction(tx, connection)
-      setStatus({ state: 'success', signature })
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
+
+      const computeIxs = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1_000 })
+      ]
+
+      const tx = new Transaction({
+        feePayer: publicKey,
+        recentBlockhash: blockhash
+      }).add(...computeIxs, mintIx)
+
+      setStatus({ state: 'submitting', message: 'Requesting authority signature…' })
+      const response = await fetch('/api/sign-mint', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ transaction: tx.serialize({ requireAllSignatures: false }).toString('base64') })
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err?.error ?? 'Authority signing failed')
+      }
+
+      const { signedTransaction } = (await response.json()) as { signedTransaction: string }
+      const authoritySignedTx = Transaction.from(Buffer.from(signedTransaction, 'base64'))
+
+      if (!signTransaction) throw new Error('Wallet does not support transaction signing')
+      const fullySigned = await signTransaction(authoritySignedTx)
+
+      const sig = await connection.sendRawTransaction(fullySigned.serialize())
+      await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
+
+      setStatus({ state: 'success', signature: sig })
+      if (publicKey) {
+        void loadCharacters(publicKey.toBase58())
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       setStatus({ state: 'error', message })
@@ -166,61 +229,114 @@ export function PlayContent() {
           Mint a Character
         </Text>
 
-        <Text color="gray.300" fontSize="sm">
-          Pick a civilization and we handle the rest: fetch next id from on-chain mint state, derive program PDAs, and
-          send the mint_character instruction (requires the mint authority wallet).
-        </Text>
-
-        <CivSelect
-          bg="rgba(255,255,255,0.04)"
-          borderColor="rgba(255,255,255,0.08)"
-          color="white"
-          value={civilization}
-          onChange={(event) => setCivilization(event.target.value as (typeof CIVS)[number])}
-          maxW="260px"
-          paddingX={3}
-          paddingY={2}
-          borderRadius="md"
-        >
-          {CIVS.map((civ) => (
-            <option key={civ} value={civ}>
-              {civ}
-            </option>
-          ))}
-        </CivSelect>
-
-        {status.state === 'error' && (
-          <Box borderRadius="md" bg="rgba(255,0,0,0.08)" color="white" padding={3} border="1px solid rgba(255,0,0,0.24)">
-            <Text>{status.message}</Text>
-          </Box>
+        {!hasCharacters && (
+          <Text color="gray.300" fontSize="sm">
+            Pick a civilization and we handle the rest: fetch next id from on-chain mint state, derive program PDAs, and
+            send the mint_character instruction (requires the mint authority wallet).
+          </Text>
         )}
 
-        {status.state === 'success' && (
-          <Box
-            borderRadius="md"
-            bg="rgba(0,255,0,0.08)"
+        <Box position="relative" width="full" maxW="260px">
+          <CivSelect
+            bg="rgba(255,255,255,0.04)"
+            borderColor="rgba(255,255,255,0.08)"
             color="white"
-            padding={3}
-            border="1px solid rgba(0,255,0,0.24)"
+            value={civilization}
+            onChange={(event) => setCivilization(event.target.value as (typeof CIVS)[number])}
+            width="full"
+            paddingX={3}
+            paddingY={2}
+            borderRadius="md"
+            pr={10}
+            appearance="none"
           >
-            <Text>
-              Submitted. Signature:{' '}
-              <Text as="span" fontFamily="mono">
-                {status.signature}
-              </Text>
+            {CIVS.map((civ) => (
+              <option key={civ} value={civ}>
+                {civ}
+              </option>
+            ))}
+          </CivSelect>
+          <Box
+            aria-hidden
+            pointerEvents="none"
+            position="absolute"
+            right={3}
+            top="50%"
+            transform="translateY(-50%)"
+            color="whiteAlpha.800"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+              <title>ChevronDown</title>
+              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Box>
+        </Box>
+
+        {loadingCharacters && <Text color="gray.400">Loading your characters…</Text>}
+
+        {!loadingCharacters && characters.length > 0 && (
+          <Stack
+            border="1px solid rgba(255,255,255,0.08)"
+            borderRadius="md"
+            padding={4}
+            width="full"
+            gap={3}
+            bg="rgba(255,255,255,0.02)"
+          >
+            <Text color="white" fontWeight="700">
+              Your characters
             </Text>
-          </Box>
+            <Stack direction={{ base: 'column', md: 'row' }} align="center" gap={4} width="full">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCarouselIndex((prev) => (prev - 1 + characters.length) % characters.length)}
+              >
+                Prev
+              </Button>
+              {characters[carouselIndex] && (
+                <Stack
+                  align="center"
+                  bg="rgba(0,0,0,0.4)"
+                  borderRadius="md"
+                  padding={4}
+                  width="full"
+                  maxW="420px"
+                  gap={2}
+                  textAlign="center"
+                >
+                  {characters[carouselIndex].metadata?.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt={characters[carouselIndex].metadata?.name ?? 'Character image'}
+                      src={characters[carouselIndex].metadata?.image}
+                      style={{ maxHeight: 220, objectFit: 'contain', borderRadius: 8, width: '100%' }}
+                    />
+                  ) : null}
+                  <Text color="white" fontWeight="700">
+                    {characters[carouselIndex].metadata?.name ??
+                      `${characters[carouselIndex].civilization} #${characters[carouselIndex].civilizationCharacterId}`}
+                  </Text>
+                  <Text color="gray.300" fontSize="sm">
+                    Civilization: {characters[carouselIndex].civilization} · ID: {characters[carouselIndex].civilizationCharacterId}
+                  </Text>
+                  {characters[carouselIndex].metadata?.description && (
+                    <Text color="gray.400" fontSize="sm">
+                      {characters[carouselIndex].metadata?.description}
+                    </Text>
+                  )}
+                </Stack>
+              )}
+              <Button size="sm" variant="outline" onClick={() => setCarouselIndex((prev) => (prev + 1) % characters.length)}>
+                Next
+              </Button>
+            </Stack>
+          </Stack>
         )}
 
-        {status.state === 'submitting' && (
-          <Box
-            borderRadius="md"
-            bg="rgba(255,255,255,0.05)"
-            color="white"
-            padding={3}
-            border="1px solid rgba(255,255,255,0.16)"
-          >
-            <Text>{status.message}</Text>
+        {!loadingCharacters && characters.length === 0 && (
+          <Box borderRadius="md" bg="rgba(255,255,255,0.04)" border="1px solid rgba(255,255,255,0.08)" padding={4} color="white">
+            Connect and mint your first character to see it here.
           </Box>
         )}
 

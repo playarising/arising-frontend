@@ -1,9 +1,9 @@
-import { PageContainer } from '@/components'
-import { PlayContent } from './PlayContent'
-import { authOptions } from '@/lib/auth'
 import type { Metadata } from 'next'
-import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth'
+import { PageContainer } from '@/components'
+import { authOptions } from '@/lib'
+import { PlayContent } from './PlayContent'
 
 export const metadata: Metadata = {
   title: 'Play Arising',

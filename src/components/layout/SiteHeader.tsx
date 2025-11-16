@@ -8,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
 import { AppLink } from '../navigation'
+import { fetchCharactersForAuthority } from '@/lib'
 
 export function SiteHeader() {
   const { connected, disconnect, publicKey, signMessage } = useWallet()
@@ -16,6 +17,9 @@ export function SiteHeader() {
 
   const signing = useRef(false)
   const [signingIn, setSigningIn] = useState(false)
+  const [hasCharacters, setHasCharacters] = useState(false)
+  const [loadingCharacters, setLoadingCharacters] = useState(false)
+  const [showMintInfo, setShowMintInfo] = useState(false)
 
   const router = useRouter()
   const pathname = usePathname()
@@ -105,6 +109,31 @@ export function SiteHeader() {
     }
   }, [connected, disconnect, publicKey, router, session?.user?.address, sessionStatus, signMessage])
 
+  useEffect(() => {
+    const authority = session?.user?.address
+    if (!authority) {
+      setHasCharacters(false)
+      return
+    }
+    let cancelled = false
+    const run = async () => {
+      try {
+        setLoadingCharacters(true)
+        const chars = await fetchCharactersForAuthority(authority)
+        if (!cancelled) setHasCharacters((chars?.length ?? 0) > 0)
+      } catch (error) {
+        console.error('Failed to load characters for header', error)
+        if (!cancelled) setHasCharacters(false)
+      } finally {
+        if (!cancelled) setLoadingCharacters(false)
+      }
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [session?.user?.address])
+
   const handleSignOut = async () => {
     try {
       await disconnect()
@@ -124,6 +153,40 @@ export function SiteHeader() {
 
   return (
     <Stack as="header" margin="0 !important" position="absolute" top={0} width="full" zIndex="100">
+      {showMintInfo && (
+        <Box
+          position="fixed"
+          inset={0}
+          backgroundColor="rgba(0, 0, 0, 0.82)"
+          zIndex={2000}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          padding={4}
+          onClick={() => setShowMintInfo(false)}
+        >
+          <Box
+            bg="black"
+            border="1px solid rgba(255,255,255,0.1)"
+            borderRadius="md"
+            padding={5}
+            maxW="520px"
+            color="gray.200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Text color="white" fontWeight="700" marginBottom={3}>
+              Mint Instructions
+            </Text>
+            <Text fontSize="sm" lineHeight="tall">
+              Connect your wallet, choose a civilization on the play page, and click &quot;Mint Character&quot;. The mint requires the
+              program authority co-signature, which we request automatically when you submit.
+            </Text>
+            <Button marginTop={4} size="sm" onClick={() => setShowMintInfo(false)}>
+              Close
+            </Button>
+          </Box>
+        </Box>
+      )}
       {signingIn && (
         <Box
           position="fixed"
@@ -150,15 +213,29 @@ export function SiteHeader() {
         </Flex>
 
         {isAuthed && (
-          <Button
-            onClick={handleSignOut}
-            background="black"
-            color="custom-blue"
-            _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
-            size="sm"
-          >
-            <Text fontWeight="600">Sign out</Text>
-          </Button>
+          <HStack>
+            {hasCharacters && (
+              <Button
+                onClick={() => setShowMintInfo(true)}
+                background="black"
+                color="white"
+                _hover={{ bg: 'gray.800' }}
+                size="sm"
+                loading={loadingCharacters}
+              >
+                <Text fontWeight="600">Mint instructions</Text>
+              </Button>
+            )}
+            <Button
+              onClick={handleSignOut}
+              background="black"
+              color="custom-blue"
+              _hover={{ bg: 'custom-blue', color: 'custom-dark-primary' }}
+              size="sm"
+            >
+              <Text fontWeight="600">Sign out</Text>
+            </Button>
+          </HStack>
         )}
       </HStack>
     </Stack>

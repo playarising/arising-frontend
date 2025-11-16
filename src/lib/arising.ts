@@ -1,24 +1,10 @@
-import {
-  PublicKey,
-  SYSVAR_RENT_PUBKEY,
-  SystemProgram,
-  TransactionInstruction,
-} from '@solana/web3.js'
+import { PublicKey, SYSVAR_RENT_PUBKEY, SystemProgram, TransactionInstruction } from '@solana/web3.js'
 
-export const ARISING_PROGRAM_ID = new PublicKey(
-  'arisf5D474u42BL55eCbDFgc5qA3LHGhgVdhCYQkgrM',
-)
+export const ARISING_PROGRAM_ID = new PublicKey('arisf5D474u42BL55eCbDFgc5qA3LHGhgVdhCYQkgrM')
 
-export const TOKEN_PROGRAM_ID = new PublicKey(
-  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-)
-export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey(
-  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
-)
-// Standard Metaplex token metadata program.
-export const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
-  'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
-)
+export const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+export const TOKEN_METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
 
 const DISCRIMINATORS: Record<string, Buffer> = {
   allocate_attributes: Buffer.from([85, 81, 107, 136, 183, 57, 94, 54]),
@@ -38,7 +24,7 @@ const DISCRIMINATORS: Record<string, Buffer> = {
   start_recipe: Buffer.from([240, 196, 13, 248, 172, 152, 182, 198]),
   unequip_item: Buffer.from([96, 192, 232, 54, 127, 191, 236, 128]),
   update_civilization_cap: Buffer.from([132, 42, 14, 83, 56, 239, 38, 244]),
-  withdraw_usdc_treasury: Buffer.from([78, 177, 147, 108, 18, 251, 63, 233]),
+  withdraw_usdc_treasury: Buffer.from([78, 177, 147, 108, 18, 251, 63, 233])
 }
 
 const CIVILIZATION = {
@@ -47,7 +33,7 @@ const CIVILIZATION = {
   Ikarans: 2,
   Zhand: 3,
   Shinkari: 4,
-  Tarki: 5,
+  Tarki: 5
 } as const
 const CHARACTER_CLASS = {
   ArdKnight: 0,
@@ -61,7 +47,7 @@ const CHARACTER_CLASS = {
   ShinkariSamurai: 8,
   ShinkariOnmyoji: 9,
   TarkiRaider: 10,
-  TarkiSkald: 11,
+  TarkiSkald: 11
 } as const
 const GENDER = { Male: 0, Female: 1 } as const
 const EQUIPMENT_SLOT = {
@@ -75,7 +61,7 @@ const EQUIPMENT_SLOT = {
   RingTwo: 7,
   AmuletOne: 8,
   AmuletTwo: 9,
-  Back: 10,
+  Back: 10
 } as const
 
 export type Civilization = keyof typeof CIVILIZATION | number
@@ -113,47 +99,41 @@ export const findMintStatePda = (programId = ARISING_PROGRAM_ID) =>
 export const findCollectionMintPda = (programId = ARISING_PROGRAM_ID) =>
   PublicKey.findProgramAddressSync([COLLECTION_MINT_SEED], programId)[0]
 
-export const findCollectionTokenAccountPda = (
-  programId = ARISING_PROGRAM_ID,
-  owner?: PublicKey,
-) => {
+export const findCollectionTokenAccountPda = (programId = ARISING_PROGRAM_ID, owner?: PublicKey) => {
   if (!owner) {
     return PublicKey.findProgramAddressSync([COLLECTION_TOKEN_SEED], programId)[0]
   }
   return PublicKey.findProgramAddressSync(
     [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), findCollectionMintPda(programId).toBuffer()],
-    ASSOCIATED_TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
   )[0]
 }
 
 export const findCharacterPda = (
   civilizationIndex: number,
   characterId: number,
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
-  PublicKey.findProgramAddressSync(
-    [CHARACTER_SEED, Buffer.from([civilizationIndex]), u16(characterId)],
-    programId,
-  )[0]
+  PublicKey.findProgramAddressSync([CHARACTER_SEED, Buffer.from([civilizationIndex]), u16(characterId)], programId)[0]
 
 export const findCharacterMintPda = (
   civilizationIndex: number,
   characterId: number,
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   PublicKey.findProgramAddressSync(
     [CHARACTER_NFT_MINT_SEED, Buffer.from([civilizationIndex]), u16(characterId)],
-    programId,
+    programId
   )[0]
 
 export const findCharacterTokenPda = (
   civilizationIndex: number,
   characterId: number,
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   PublicKey.findProgramAddressSync(
     [CHARACTER_NFT_TOKEN_SEED, Buffer.from([civilizationIndex]), u16(characterId)],
-    programId,
+    programId
   )[0]
 
 const u8 = (value: number) => {
@@ -188,13 +168,10 @@ const resolveEnum = <T extends Record<string, number>>(table: T, value: keyof T 
   return mapped
 }
 
-const encodeCivilization = (civilization: Civilization) =>
-  u8(resolveEnum(CIVILIZATION, civilization))
-const encodeCharacterClass = (className: CharacterClass) =>
-  u8(resolveEnum(CHARACTER_CLASS, className))
+const encodeCivilization = (civilization: Civilization) => u8(resolveEnum(CIVILIZATION, civilization))
+const encodeCharacterClass = (className: CharacterClass) => u8(resolveEnum(CHARACTER_CLASS, className))
 const encodeGender = (gender: Gender) => u8(resolveEnum(GENDER, gender))
-const encodeEquipmentSlot = (slot: EquipmentSlot) =>
-  u8(resolveEnum(EQUIPMENT_SLOT, slot))
+const encodeEquipmentSlot = (slot: EquipmentSlot) => u8(resolveEnum(EQUIPMENT_SLOT, slot))
 
 const encodeAttributes = (attributes: AttributesInput) =>
   Buffer.concat([
@@ -203,7 +180,7 @@ const encodeAttributes = (attributes: AttributesInput) =>
     i16(attributes.mag_atk),
     i16(attributes.mag_def),
     i16(attributes.range),
-    i16(attributes.rate),
+    i16(attributes.rate)
   ])
 
 const encodeCoreStats = (stats: CoreStatsInput) =>
@@ -213,38 +190,38 @@ const makeInstruction = (
   discriminator: Buffer,
   data: Buffer,
   accounts: AccountsList,
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   new TransactionInstruction({
     programId,
     keys: accounts,
-    data: Buffer.concat([discriminator, data]),
+    data: Buffer.concat([discriminator, data])
   })
 
 export const allocateAttributesIx = (
   args: { civilization: Civilization; characterId: number; allocation: AttributesInput },
-  accounts: { character: PublicKey; authority: PublicKey },
+  accounts: { character: PublicKey; authority: PublicKey }
 ) =>
   makeInstruction(
     DISCRIMINATORS.allocate_attributes,
     Buffer.concat([encodeCivilization(args.civilization), u16(args.characterId), encodeAttributes(args.allocation)]),
     [
       { pubkey: accounts.character, isWritable: true, isSigner: false },
-      { pubkey: accounts.authority, isWritable: false, isSigner: true },
-    ],
+      { pubkey: accounts.authority, isWritable: false, isSigner: true }
+    ]
   )
 
 export const allocateCoreStatsIx = (
   args: { civilization: Civilization; characterId: number; allocation: CoreStatsInput },
-  accounts: { character: PublicKey; authority: PublicKey },
+  accounts: { character: PublicKey; authority: PublicKey }
 ) =>
   makeInstruction(
     DISCRIMINATORS.allocate_core_stats,
     Buffer.concat([encodeCivilization(args.civilization), u16(args.characterId), encodeCoreStats(args.allocation)]),
     [
       { pubkey: accounts.character, isWritable: true, isSigner: false },
-      { pubkey: accounts.authority, isWritable: false, isSigner: true },
-    ],
+      { pubkey: accounts.authority, isWritable: false, isSigner: true }
+    ]
   )
 
 export const buyEnergyPassIx = (
@@ -257,7 +234,7 @@ export const buyEnergyPassIx = (
     treasuryUsdcAccount: PublicKey
     tokenProgram?: PublicKey
   },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.buy_energy_pass,
@@ -268,26 +245,22 @@ export const buyEnergyPassIx = (
       { pubkey: accounts.mintState ?? findMintStatePda(programId), isWritable: false, isSigner: false },
       { pubkey: accounts.userUsdcAccount, isWritable: true, isSigner: false },
       { pubkey: accounts.treasuryUsdcAccount, isWritable: true, isSigner: false },
-      { pubkey: accounts.tokenProgram ?? TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+      { pubkey: accounts.tokenProgram ?? TOKEN_PROGRAM_ID, isWritable: false, isSigner: false }
     ],
-    programId,
+    programId
   )
 
 export const chooseClassIx = (
   args: { civilization: Civilization; characterId: number; className: CharacterClass },
-  accounts: { character: PublicKey; authority: PublicKey },
+  accounts: { character: PublicKey; authority: PublicKey }
 ) =>
   makeInstruction(
     DISCRIMINATORS.choose_class,
-    Buffer.concat([
-      encodeCivilization(args.civilization),
-      u16(args.characterId),
-      encodeCharacterClass(args.className),
-    ]),
+    Buffer.concat([encodeCivilization(args.civilization), u16(args.characterId), encodeCharacterClass(args.className)]),
     [
       { pubkey: accounts.character, isWritable: true, isSigner: false },
-      { pubkey: accounts.authority, isWritable: false, isSigner: true },
-    ],
+      { pubkey: accounts.authority, isWritable: false, isSigner: true }
+    ]
   )
 
 export const claimQuestIx = (
@@ -301,7 +274,7 @@ export const claimQuestIx = (
     systemProgram?: PublicKey
     rent?: PublicKey
   },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.claim_quest,
@@ -314,12 +287,12 @@ export const claimQuestIx = (
       {
         pubkey: accounts.associatedTokenProgram ?? ASSOCIATED_TOKEN_PROGRAM_ID,
         isWritable: false,
-        isSigner: false,
+        isSigner: false
       },
       { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false },
-      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }
     ],
-    programId,
+    programId
   )
 
 export const claimRecipeIx = (
@@ -333,7 +306,7 @@ export const claimRecipeIx = (
     systemProgram?: PublicKey
     rent?: PublicKey
   },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.claim_recipe,
@@ -346,25 +319,25 @@ export const claimRecipeIx = (
       {
         pubkey: accounts.associatedTokenProgram ?? ASSOCIATED_TOKEN_PROGRAM_ID,
         isWritable: false,
-        isSigner: false,
+        isSigner: false
       },
       { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false },
-      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }
     ],
-    programId,
+    programId
   )
 
 export const consumeEnergyIx = (
   args: { civilization: Civilization; characterId: number; amount: number },
-  accounts: { character: PublicKey; authority: PublicKey },
+  accounts: { character: PublicKey; authority: PublicKey }
 ) =>
   makeInstruction(
     DISCRIMINATORS.consume_energy,
     Buffer.concat([encodeCivilization(args.civilization), u16(args.characterId), u16(args.amount)]),
     [
       { pubkey: accounts.character, isWritable: true, isSigner: false },
-      { pubkey: accounts.authority, isWritable: false, isSigner: true },
-    ],
+      { pubkey: accounts.authority, isWritable: false, isSigner: true }
+    ]
   )
 
 export const equipItemIx = (
@@ -383,7 +356,7 @@ export const equipItemIx = (
     systemProgram?: PublicKey
     rent?: PublicKey
   },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.equip_item,
@@ -391,7 +364,7 @@ export const equipItemIx = (
       encodeCivilization(args.civilization),
       u16(args.characterId),
       encodeEquipmentSlot(args.slot),
-      u8(args.definitionIndex),
+      u8(args.definitionIndex)
     ]),
     [
       { pubkey: accounts.character, isWritable: true, isSigner: false },
@@ -401,22 +374,22 @@ export const equipItemIx = (
       {
         pubkey: accounts.associatedTokenProgram ?? ASSOCIATED_TOKEN_PROGRAM_ID,
         isWritable: false,
-        isSigner: false,
+        isSigner: false
       },
       { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false },
-      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }
     ],
-    programId,
+    programId
   )
 
 export const getCharacterMetadataIx = (
   args: { civilization: Civilization; characterId: number },
-  accounts: { character: PublicKey },
+  accounts: { character: PublicKey }
 ) =>
   makeInstruction(
     DISCRIMINATORS.get_character_metadata,
     Buffer.concat([encodeCivilization(args.civilization), u16(args.characterId)]),
-    [{ pubkey: accounts.character, isWritable: false, isSigner: false }],
+    [{ pubkey: accounts.character, isWritable: false, isSigner: false }]
   )
 
 export const initializeIx = (
@@ -435,7 +408,7 @@ export const initializeIx = (
     associatedTokenProgram?: PublicKey
     rent?: PublicKey
   },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.initialize,
@@ -447,7 +420,7 @@ export const initializeIx = (
       {
         pubkey: accounts.collectionTokenAccount ?? findCollectionTokenAccountPda(programId),
         isWritable: true,
-        isSigner: false,
+        isSigner: false
       },
       { pubkey: accounts.collectionMetadata, isWritable: true, isSigner: false },
       { pubkey: accounts.collectionMasterEdition, isWritable: true, isSigner: false },
@@ -459,11 +432,11 @@ export const initializeIx = (
       {
         pubkey: accounts.associatedTokenProgram ?? ASSOCIATED_TOKEN_PROGRAM_ID,
         isWritable: false,
-        isSigner: false,
+        isSigner: false
       },
-      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }
     ],
-    programId,
+    programId
   )
 
 export const mintCharacterIx = (
@@ -485,7 +458,7 @@ export const mintCharacterIx = (
     rent?: PublicKey
     systemProgram?: PublicKey
   },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.mint_character,
@@ -494,9 +467,13 @@ export const mintCharacterIx = (
       {
         pubkey:
           accounts.character ??
-          findCharacterPda(typeof args.civilization === 'number' ? args.civilization : CIVILIZATION[args.civilization], args.characterId, programId),
+          findCharacterPda(
+            typeof args.civilization === 'number' ? args.civilization : CIVILIZATION[args.civilization],
+            args.characterId,
+            programId
+          ),
         isWritable: true,
-        isSigner: false,
+        isSigner: false
       },
       { pubkey: accounts.authority, isWritable: true, isSigner: true },
       { pubkey: accounts.mintState ?? findMintStatePda(programId), isWritable: true, isSigner: false },
@@ -507,10 +484,10 @@ export const mintCharacterIx = (
           findCharacterMintPda(
             typeof args.civilization === 'number' ? args.civilization : CIVILIZATION[args.civilization],
             args.characterId,
-            programId,
+            programId
           ),
         isWritable: true,
-        isSigner: false,
+        isSigner: false
       },
       {
         pubkey:
@@ -518,10 +495,10 @@ export const mintCharacterIx = (
           findCharacterTokenPda(
             typeof args.civilization === 'number' ? args.civilization : CIVILIZATION[args.civilization],
             args.characterId,
-            programId,
+            programId
           ),
         isWritable: true,
-        isSigner: false,
+        isSigner: false
       },
       { pubkey: accounts.metadata, isWritable: true, isSigner: false },
       { pubkey: accounts.masterEdition, isWritable: true, isSigner: false },
@@ -531,48 +508,48 @@ export const mintCharacterIx = (
       { pubkey: accounts.tokenProgram ?? TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
       { pubkey: accounts.tokenMetadataProgram ?? TOKEN_METADATA_PROGRAM_ID, isWritable: false, isSigner: false },
       { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
-      { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false },
+      { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false }
     ],
-    programId,
+    programId
   )
 
 export const redeemEnergyPassIx = (
   args: { civilization: Civilization; characterId: number },
-  accounts: { character: PublicKey; authority: PublicKey },
+  accounts: { character: PublicKey; authority: PublicKey }
 ) =>
   makeInstruction(
     DISCRIMINATORS.redeem_energy_pass,
     Buffer.concat([encodeCivilization(args.civilization), u16(args.characterId)]),
     [
       { pubkey: accounts.character, isWritable: true, isSigner: false },
-      { pubkey: accounts.authority, isWritable: true, isSigner: true },
-    ],
+      { pubkey: accounts.authority, isWritable: true, isSigner: true }
+    ]
   )
 
 export const refillEnergyIx = (
   args: { civilization: Civilization; characterId: number },
-  accounts: { character: PublicKey; authority: PublicKey },
+  accounts: { character: PublicKey; authority: PublicKey }
 ) =>
   makeInstruction(
     DISCRIMINATORS.refill_energy,
     Buffer.concat([encodeCivilization(args.civilization), u16(args.characterId)]),
     [
       { pubkey: accounts.character, isWritable: true, isSigner: false },
-      { pubkey: accounts.authority, isWritable: false, isSigner: true },
-    ],
+      { pubkey: accounts.authority, isWritable: false, isSigner: true }
+    ]
   )
 
 export const startQuestIx = (
   args: { civilization: Civilization; characterId: number; questId: number },
-  accounts: { character: PublicKey; authority: PublicKey },
+  accounts: { character: PublicKey; authority: PublicKey }
 ) =>
   makeInstruction(
     DISCRIMINATORS.start_quest,
     Buffer.concat([encodeCivilization(args.civilization), u16(args.characterId), u16(args.questId)]),
     [
       { pubkey: accounts.character, isWritable: true, isSigner: false },
-      { pubkey: accounts.authority, isWritable: false, isSigner: true },
-    ],
+      { pubkey: accounts.authority, isWritable: false, isSigner: true }
+    ]
   )
 
 export const startRecipeIx = (
@@ -586,7 +563,7 @@ export const startRecipeIx = (
     systemProgram?: PublicKey
     rent?: PublicKey
   },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.start_recipe,
@@ -599,12 +576,12 @@ export const startRecipeIx = (
       {
         pubkey: accounts.associatedTokenProgram ?? ASSOCIATED_TOKEN_PROGRAM_ID,
         isWritable: false,
-        isSigner: false,
+        isSigner: false
       },
       { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false },
-      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }
     ],
-    programId,
+    programId
   )
 
 export const unequipItemIx = (
@@ -618,7 +595,7 @@ export const unequipItemIx = (
     systemProgram?: PublicKey
     rent?: PublicKey
   },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.unequip_item,
@@ -631,27 +608,27 @@ export const unequipItemIx = (
       {
         pubkey: accounts.associatedTokenProgram ?? ASSOCIATED_TOKEN_PROGRAM_ID,
         isWritable: false,
-        isSigner: false,
+        isSigner: false
       },
       { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false },
-      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }
     ],
-    programId,
+    programId
   )
 
 export const updateCivilizationCapIx = (
   args: { civilization: Civilization; newCap: number },
   accounts: { mintState?: PublicKey; authority: PublicKey },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.update_civilization_cap,
     Buffer.concat([encodeCivilization(args.civilization), u16(args.newCap)]),
     [
       { pubkey: accounts.mintState ?? findMintStatePda(programId), isWritable: true, isSigner: false },
-      { pubkey: accounts.authority, isWritable: false, isSigner: true },
+      { pubkey: accounts.authority, isWritable: false, isSigner: true }
     ],
-    programId,
+    programId
   )
 
 export const withdrawUsdcTreasuryIx = (
@@ -663,7 +640,7 @@ export const withdrawUsdcTreasuryIx = (
     destination: PublicKey
     tokenProgram?: PublicKey
   },
-  programId: PublicKey = ARISING_PROGRAM_ID,
+  programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
   makeInstruction(
     DISCRIMINATORS.withdraw_usdc_treasury,
@@ -673,7 +650,7 @@ export const withdrawUsdcTreasuryIx = (
       { pubkey: accounts.mintAuthority, isWritable: false, isSigner: true },
       { pubkey: accounts.treasuryUsdcAccount, isWritable: true, isSigner: false },
       { pubkey: accounts.destination, isWritable: true, isSigner: false },
-      { pubkey: accounts.tokenProgram ?? TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+      { pubkey: accounts.tokenProgram ?? TOKEN_PROGRAM_ID, isWritable: false, isSigner: false }
     ],
-    programId,
+    programId
   )

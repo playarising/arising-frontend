@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import { PageContainer, StartButton } from '@/components'
-import { authOptions } from '@/lib/auth'
+import { authOptions } from '@/lib'
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions)
