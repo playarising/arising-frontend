@@ -1,12 +1,12 @@
 'use client'
 
-import { Button, Flex, HStack, Stack, Text } from '@chakra-ui/react'
+import { Box, Button, Flex, HStack, Spinner, Stack, Text } from '@chakra-ui/react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import bs58 from 'bs58'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { signIn, signOut, useSession } from 'next-auth/react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AppLink } from '../navigation'
 
 export function SiteHeader() {
@@ -15,6 +15,7 @@ export function SiteHeader() {
   const { data: session, status: sessionStatus } = useSession()
 
   const signing = useRef(false)
+  const [signingIn, setSigningIn] = useState(false)
 
   const router = useRouter()
   const pathname = usePathname()
@@ -30,6 +31,7 @@ export function SiteHeader() {
 
     if (!connected || !publicKey) {
       signing.current = false
+      setSigningIn(false)
       return
     }
 
@@ -41,6 +43,7 @@ export function SiteHeader() {
 
     let cancelled = false
     signing.current = true
+    setSigningIn(true)
 
     const signConnectionMessage = async () => {
       try {
@@ -91,6 +94,7 @@ export function SiteHeader() {
         }
       } finally {
         signing.current = false
+        setSigningIn(false)
       }
     }
 
@@ -99,7 +103,7 @@ export function SiteHeader() {
     return () => {
       cancelled = true
     }
-  }, [connected, disconnect, publicKey, session?.user?.address, sessionStatus, signMessage, router.replace])
+  }, [connected, disconnect, publicKey, router, session?.user?.address, sessionStatus, signMessage])
 
   const handleSignOut = async () => {
     try {
@@ -120,6 +124,24 @@ export function SiteHeader() {
 
   return (
     <Stack as="header" margin="0 !important" position="absolute" top={0} width="full" zIndex="100">
+      {signingIn && (
+        <Box
+          position="fixed"
+          inset={0}
+          backgroundColor="rgba(0, 0, 0, 0.82)"
+          zIndex={2000}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Stack align="center" gap={4}>
+            <Spinner color="custom-blue" size="xl" />
+            <Text color="white" fontWeight="600">
+              Finalizing sign-in…
+            </Text>
+          </Stack>
+        </Box>
+      )}
       <HStack align="center" justify="space-between" paddingX={{ base: 4, md: 10 }} paddingY={{ base: 3, md: 2 }}>
         <Flex alignItems="center" height="80px" width="40px">
           <AppLink href="/">
