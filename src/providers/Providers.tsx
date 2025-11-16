@@ -1,13 +1,11 @@
 'use client'
 
 import { BackpackWalletAdapter } from '@solana/wallet-adapter-backpack'
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base'
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom'
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare'
 import { TorusWalletAdapter } from '@solana/wallet-adapter-torus'
-import { clusterApiUrl } from '@solana/web3.js'
 import { SessionProvider } from 'next-auth/react'
 import { type ReactNode, useMemo } from 'react'
 import '@solana/wallet-adapter-react-ui/styles.css'
@@ -15,7 +13,6 @@ import '@solana/wallet-adapter-react-ui/styles.css'
 import { ThemeProvider } from './Theme'
 
 export function Providers({ children }: { children: ReactNode }) {
-  const endpoint = useMemo(() => clusterApiUrl(WalletAdapterNetwork.Mainnet), [])
 
   const wallets = useMemo(() => {
     const configured = [
@@ -37,7 +34,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <SessionProvider>
-        <ConnectionProvider endpoint={endpoint}>
+        <ConnectionProvider endpoint={"https://playarising.com/api/solana-rpc"}>
           <WalletProvider autoConnect wallets={wallets}>
             <WalletModalProvider>{children}</WalletModalProvider>
           </WalletProvider>
