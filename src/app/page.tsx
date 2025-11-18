@@ -1,7 +1,7 @@
 import { Box, Heading, Text, VStack } from '@chakra-ui/react'
-import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
 import Image from 'next/image'
+import { redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth'
 import { PageContainer, StartButton } from '@/components'
 import { authOptions } from '@/lib'
 

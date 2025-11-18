@@ -6,9 +6,9 @@ import bs58 from 'bs58'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { signIn, signOut, useSession } from 'next-auth/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { dispatchOpenMintModal, fetchCharactersForAuthority } from '@/lib'
 import { AppLink } from '../navigation'
-import { fetchCharactersForAuthority } from '@/lib'
 
 export function SiteHeader() {
   const { connected, disconnect, publicKey, signMessage } = useWallet()
@@ -16,13 +16,14 @@ export function SiteHeader() {
   const { data: session, status: sessionStatus } = useSession()
 
   const signing = useRef(false)
+  const loggingOut = useRef(false)
   const [signingIn, setSigningIn] = useState(false)
   const [hasCharacters, setHasCharacters] = useState(false)
   const [loadingCharacters, setLoadingCharacters] = useState(false)
-  const [showMintInfo, setShowMintInfo] = useState(false)
 
   const router = useRouter()
   const pathname = usePathname()
+  const walletAddress = useMemo(() => publicKey?.toBase58() ?? null, [publicKey])
 
   useEffect(() => {
     if (sessionStatus === 'authenticated' && pathname === '/') {
@@ -39,7 +40,6 @@ export function SiteHeader() {
       return
     }
 
-    const walletAddress = publicKey.toBase58()
     const sessionAddress = session?.user?.address
 
     if (sessionAddress === walletAddress) return
@@ -107,7 +107,51 @@ export function SiteHeader() {
     return () => {
       cancelled = true
     }
-  }, [connected, disconnect, publicKey, router, session?.user?.address, sessionStatus, signMessage])
+  }, [connected, disconnect, walletAddress, router, session?.user?.address, sessionStatus, signMessage])
+
+  useEffect(() => {
+    if (sessionStatus !== 'authenticated') {
+      loggingOut.current = false
+      return
+    }
+    if (connected && walletAddress) return
+    if (loggingOut.current) return
+    loggingOut.current = true
+
+    const forceLogout = async () => {
+      try {
+        await signOut({ callbackUrl: '/', redirect: false })
+      } catch (error) {
+        console.error('Forced sign-out failed', error)
+      } finally {
+        loggingOut.current = false
+        router.replace('/')
+      }
+    }
+
+    void forceLogout()
+  }, [connected, walletAddress, router, sessionStatus, signOut])
+
+  useEffect(() => {
+    if (sessionStatus !== 'authenticated') return
+    const sessionAddress = session?.user?.address
+    if (!sessionAddress || !walletAddress) return
+    if (sessionAddress === walletAddress) return
+    if (loggingOut.current) return
+    loggingOut.current = true
+
+    const resetSession = async () => {
+      try {
+        await signOut({ callbackUrl: '/', redirect: false })
+      } catch (error) {
+        console.error('Failed to reset session on wallet change', error)
+      } finally {
+        loggingOut.current = false
+      }
+    }
+
+    void resetSession()
+  }, [session?.user?.address, sessionStatus, walletAddress, signOut])
 
   useEffect(() => {
     const authority = session?.user?.address
@@ -149,44 +193,18 @@ export function SiteHeader() {
     }
   }
 
+  const handleMintClick = () => {
+    if (pathname !== '/play') {
+      router.push('/play')
+      return
+    }
+    dispatchOpenMintModal()
+  }
+
   const isAuthed = Boolean(session?.user?.address)
 
   return (
     <Stack as="header" margin="0 !important" position="absolute" top={0} width="full" zIndex="100">
-      {showMintInfo && (
-        <Box
-          position="fixed"
-          inset={0}
-          backgroundColor="rgba(0, 0, 0, 0.82)"
-          zIndex={2000}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          padding={4}
-          onClick={() => setShowMintInfo(false)}
-        >
-          <Box
-            bg="black"
-            border="1px solid rgba(255,255,255,0.1)"
-            borderRadius="md"
-            padding={5}
-            maxW="520px"
-            color="gray.200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Text color="white" fontWeight="700" marginBottom={3}>
-              Mint Instructions
-            </Text>
-            <Text fontSize="sm" lineHeight="tall">
-              Connect your wallet, choose a civilization on the play page, and click &quot;Mint Character&quot;. The mint requires the
-              program authority co-signature, which we request automatically when you submit.
-            </Text>
-            <Button marginTop={4} size="sm" onClick={() => setShowMintInfo(false)}>
-              Close
-            </Button>
-          </Box>
-        </Box>
-      )}
       {signingIn && (
         <Box
           position="fixed"
@@ -216,14 +234,14 @@ export function SiteHeader() {
           <HStack>
             {hasCharacters && (
               <Button
-                onClick={() => setShowMintInfo(true)}
-                background="black"
-                color="white"
-                _hover={{ bg: 'gray.800' }}
+                onClick={handleMintClick}
+                background="custom-blue"
+                color="black"
+                _hover={{ bg: 'white', color: 'black' }}
                 size="sm"
                 loading={loadingCharacters}
               >
-                <Text fontWeight="600">Mint instructions</Text>
+                <Text fontWeight="600">Mint</Text>
               </Button>
             )}
             <Button
