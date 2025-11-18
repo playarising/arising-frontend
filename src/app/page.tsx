@@ -56,7 +56,7 @@ export default async function HomePage() {
           className="animate_delay animate__animated animate__delay-4s animate__fadeIn animate__slow"
           color="white"
           fontSize={{ base: 'md', md: 'lg' }}
-          maxWidth={{ base: '300px', md: '640px' }}
+          maxWidth="350px"
         >
           Every choice becomes history. Etia is the on-chain RPG that never forgets.
         </Text>
