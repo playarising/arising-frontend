@@ -2,6 +2,7 @@ const INDEXER_ENDPOINT = 'https://indexer.playarising.com/graphql'
 
 export type CharacterRecord = {
   pubkey: string
+  authority?: string
   civilization: string
   civilizationCharacterId: number
   nftMint: string
@@ -196,6 +197,7 @@ const CHARACTER_QUERY = `
     allCharacters(condition: { authority: $authority }) {
       nodes {
         pubkey
+        authority
         civilization
         civilizationCharacterId
         nftMint
@@ -203,6 +205,21 @@ const CHARACTER_QUERY = `
         energy
         experience
       }
+  }
+}
+`
+
+const CHARACTER_BY_MINT_QUERY = `
+  query CharacterByMint($mint: String!) {
+    characterByNftMint(nftMint: $mint) {
+      pubkey
+      authority
+      civilization
+      civilizationCharacterId
+      nftMint
+      stats
+      energy
+      experience
     }
   }
 `
@@ -228,7 +245,15 @@ export async function fetchCharactersForAuthority(authority: string): Promise<Ch
 export async function fetchCharacterMetadata(
   civilization: string,
   civilizationCharacterId: number
-): Promise<{ name?: string; image?: string; description?: string; attributes?: { trait_type?: string; value?: string | number }[] } | undefined> {
+): Promise<
+  | {
+      name?: string
+      image?: string
+      description?: string
+      attributes?: { trait_type?: string; value?: string | number }[]
+    }
+  | undefined
+> {
   const slug = civilization.toLowerCase()
   const url = `https://mints.playarising.com/${slug}/${civilizationCharacterId}`
   try {
@@ -238,4 +263,21 @@ export async function fetchCharacterMetadata(
   } catch {
     return undefined
   }
+}
+
+export async function fetchCharacterByMint(mint: string): Promise<CharacterRecord | null> {
+  const res = await fetch(INDEXER_ENDPOINT, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ query: CHARACTER_BY_MINT_QUERY, variables: { mint } })
+  })
+  if (!res.ok) {
+    throw new Error(`Indexer error: ${res.status}`)
+  }
+  const json = await res.json()
+  if (json?.errors) {
+    console.error('Indexer GraphQL errors', json.errors)
+  }
+  const node = json?.data?.characterByNftMint as CharacterRecord | null | undefined
+  return node ?? null
 }

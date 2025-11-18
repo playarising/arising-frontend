@@ -5,15 +5,16 @@ import { Box, Button, CloseButton, chakra, IconButton, Progress, Spinner, Stack,
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
+import { AnimatePresence, motion } from 'framer-motion'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import 'animate.css'
 import {
   findCharacterMintPda,
   findCharacterPda,
   findCharacterTokenPda,
   findMintStatePda,
-  levelFromExperience, 
+  levelFromExperience,
   mintCharacterIx,
   OPEN_MINT_MODAL_EVENT,
   TOKEN_METADATA_PROGRAM_ID
@@ -39,42 +40,42 @@ const CIV_INDEX: Record<(typeof CIVS)[number], number> = {
 
 const CIV_LORE: Record<(typeof CIVS)[number], { summary: string; classes: string[] }> = {
   Ard: {
-    summary: 'A feudal human realm on Rhuvonor, forged by oaths and spearheaded from the city of Ard. Honor, heavy steel, and disciplined armies define their way of life.',
-    classes: [
-      'Knight — a shielded bulwark on the front line.',
-      'Templar — a holy blade that blends faith and steel.'
-    ]
+    summary:
+      'A feudal human realm on Rhuvonor, forged by oaths and spearheaded from the city of Ard. Honor, heavy steel, and disciplined armies define their way of life.',
+    classes: ['Knight — a shielded bulwark on the front line.', 'Templar — a holy blade that blends faith and steel.']
   },
   Hartenn: {
-    summary: 'Dwarves who safeguard the Eternal Flame and the “language of the gods.” Master smiths and stoic veterans of ancient wars, now fiercely protective of their halls.',
+    summary:
+      'Dwarves who safeguard the Eternal Flame and the “language of the gods.” Master smiths and stoic veterans of ancient wars, now fiercely protective of their halls.',
     classes: [
       'Engineer — a tactician who fights with inventions.',
       'Warden — an immovable guardian who holds the line.'
     ]
   },
   "I'karan": {
-    summary: 'DeAkki elves of Avos who treat nature as sacred, living among colossal trees and hidden waterways. They can shift between their true form and an elegant chosen guise.',
+    summary:
+      'DeAkki elves of Avos who treat nature as sacred, living among colossal trees and hidden waterways. They can shift between their true form and an elegant chosen guise.',
     classes: [
       'Ranger — a hunter-scout who strikes from range.',
       'Druid — a nature caster who bends the wilds to their will.'
     ]
   },
   Zhand: {
-    summary: 'Bronze-skinned desert elves of Zhan, led by matriarchs who rule from caravan to port. Traders, travelers, and survivors who read the sands like scripture.',
+    summary:
+      'Bronze-skinned desert elves of Zhan, led by matriarchs who rule from caravan to port. Traders, travelers, and survivors who read the sands like scripture.',
     classes: [
       'Sandblade — a swift duelist who dances through combat.',
       'Seer — a mystic who reads the dunes and spirits.'
     ]
   },
   Shinkari: {
-    summary: 'Eastern humans of Xian, bound by strict hierarchy, ritual, and relentless discipline. Their culture is sharpened by warfare and devotion to ancestral codes.',
-    classes: [
-      'Samurai — a precise swordsman bound by code.',
-      'Onmyoji — a mage who commands spirits and talismans.'
-    ]
+    summary:
+      'Eastern humans of Xian, bound by strict hierarchy, ritual, and relentless discipline. Their culture is sharpened by warfare and devotion to ancestral codes.',
+    classes: ['Samurai — a precise swordsman bound by code.', 'Onmyoji — a mage who commands spirits and talismans.']
   },
   "Tark'i": {
-    summary: 'Sea-weathered clans of Tark with viking and celtic roots. They raid, trade, and rally under oaths between villages instead of a crown.',
+    summary:
+      'Sea-weathered clans of Tark with viking and celtic roots. They raid, trade, and rally under oaths between villages instead of a crown.',
     classes: [
       'Raider — an agile skirmisher who raids and retreats.',
       'Skald — a battle bard whose songs empower allies.'
@@ -133,6 +134,7 @@ export function PlayContent() {
   const { connection } = useConnection()
   const { publicKey, signTransaction, connected } = useWallet()
   const { setVisible } = useWalletModal()
+  const router = useRouter()
 
   const [characters, setCharacters] = useState<CharacterWithMetadata[]>([])
   const [loadingCharacters, setLoadingCharacters] = useState(false)
@@ -142,11 +144,11 @@ export function PlayContent() {
   const [showMintModal, setShowMintModal] = useState(false)
   const hasCharacters = characters.length > 0
   const [fadeKey, setFadeKey] = useState(0)
-  const [animationClass, setAnimationClass] = useState('animate__fadeIn')
+  const [direction, setDirection] = useState<1 | -1>(1)
 
   const changeIndex = (direction: 'next' | 'prev') => {
     if (!characters.length) return
-    setAnimationClass(direction === 'next' ? 'animate__fadeInRight' : 'animate__fadeInLeft')
+    setDirection(direction === 'next' ? 1 : -1)
     setFadeKey((prev) => prev + 1)
     setCarouselIndex((prev) => {
       if (direction === 'next') return (prev + 1) % characters.length
@@ -181,8 +183,6 @@ export function PlayContent() {
     }
     loadCharacters(publicKey.toBase58())
   }, [connected, publicKey, loadCharacters])
-
- 
 
   const handleMint = useCallback(async () => {
     if (!publicKey || !connected) {
@@ -326,7 +326,7 @@ export function PlayContent() {
           width="full"
           paddingX={3}
           paddingY={2}
-          borderRadius="md"
+          borderRadius="xl"
           cursor="pointer"
           pr={10}
           appearance="none"
@@ -410,15 +410,22 @@ export function PlayContent() {
           bg="rgba(255,255,255,0.02)"
           alignItems="center"
           justifyContent="center"
-          minHeight="calc(100vh - 180px)"
           position="relative"
+          minHeight="calc(100vh - 180px)"
         >
           <Box width="full" textAlign="center" top="3" position="absolute">
             <Text color="white" fontWeight="700" fontSize={{ base: 'xl', md: '2xl' }}>
               Your characters
             </Text>
           </Box>
-          <Stack direction={{ base: 'column', md: 'row' }} align="center" justify="space-between" gap={4} width="full">
+          <Stack
+            mt="7"
+            direction={{ base: 'column', md: 'row' }}
+            align="center"
+            justify="space-between"
+            gap={4}
+            width="full"
+          >
             <IconButton
               size="md"
               variant="ghost"
@@ -434,114 +441,182 @@ export function PlayContent() {
               paddingX={2}
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
-                <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <title>ChevronLeft</title>
+                <path
+                  d="M15 6l-6 6 6 6"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </IconButton>
-            {characters[carouselIndex] && (() => {
-              const selected = characters[carouselIndex]
-              const levelFromXp =
-                selected.experience !== undefined && selected.experience !== null
-                  ? levelFromExperience(selected.experience)
-                  : undefined
-              const levelFromMetadata = selected.metadata?.attributes?.find((attr) => attr.trait_type === 'Level')?.value
-              const levelFromMetadataNumber =
-                typeof levelFromMetadata === 'number' ? levelFromMetadata : Number(levelFromMetadata ?? NaN)
-              const resolvedLevelNumber =
-                Number.isFinite(levelFromXp) && levelFromXp
-                  ? levelFromXp
-                  : Number.isFinite(levelFromMetadataNumber)
-                    ? levelFromMetadataNumber
+            {characters[carouselIndex] &&
+              (() => {
+                const selected = characters[carouselIndex]
+                const levelFromXp =
+                  selected.experience !== undefined && selected.experience !== null
+                    ? levelFromExperience(selected.experience)
                     : undefined
-              const resolvedLevel = resolvedLevelNumber ?? levelFromMetadata ?? '—'
-              const maxEnergy = resolvedLevelNumber ? 10 + (resolvedLevelNumber - 1) : undefined
-              const currentEnergy = typeof selected.energy === 'number' ? selected.energy : undefined
-              const energyPercent =
-                currentEnergy !== undefined && maxEnergy
-                  ? Math.max(0, Math.min(100, Math.round((currentEnergy / maxEnergy) * 100)))
-                  : undefined
-              let parsedStats: Record<string, unknown> | null = null
-              if (selected.stats) {
-                if (typeof selected.stats === 'string') {
-                  try {
-                    parsedStats = JSON.parse(selected.stats) as Record<string, unknown>
-                  } catch {
-                    parsedStats = null
+                const levelFromMetadata = selected.metadata?.attributes?.find(
+                  (attr) => attr.trait_type === 'Level'
+                )?.value
+                const levelFromMetadataNumber =
+                  typeof levelFromMetadata === 'number' ? levelFromMetadata : Number(levelFromMetadata ?? NaN)
+                const resolvedLevelNumber =
+                  Number.isFinite(levelFromXp) && levelFromXp
+                    ? levelFromXp
+                    : Number.isFinite(levelFromMetadataNumber)
+                      ? levelFromMetadataNumber
+                      : undefined
+                const resolvedLevel = resolvedLevelNumber ?? levelFromMetadata ?? '—'
+                const maxEnergy = resolvedLevelNumber ? 10 + (resolvedLevelNumber - 1) : undefined
+                const currentEnergy = typeof selected.energy === 'number' ? selected.energy : undefined
+                const energyPercent =
+                  currentEnergy !== undefined && maxEnergy
+                    ? Math.max(0, Math.min(100, Math.round((currentEnergy / maxEnergy) * 100)))
+                    : undefined
+                let parsedStats: Record<string, unknown> | null = null
+                if (selected.stats) {
+                  if (typeof selected.stats === 'string') {
+                    try {
+                      parsedStats = JSON.parse(selected.stats) as Record<string, unknown>
+                    } catch {
+                      parsedStats = null
+                    }
+                  } else if (typeof selected.stats === 'object') {
+                    parsedStats = selected.stats
                   }
-                } else if (typeof selected.stats === 'object') {
-                  parsedStats = selected.stats
                 }
-              }
-              const statsEntries = parsedStats
-                ? (Object.entries(parsedStats).filter(([, value]) => typeof value === 'number') as Array<[string, number]>)
-                : []
+                const statsEntries = parsedStats
+                  ? (Object.entries(parsedStats).filter(([, value]) => typeof value === 'number') as Array<
+                      [string, number]
+                    >)
+                  : []
 
-              return (
-                <Stack
-                  key={fadeKey}
-                  className={`animate__animated ${animationClass}`}
-                  align="center"
-                  bg="rgba(0,0,0,0.4)"
-                  borderRadius="md"
-                  padding={10}
-                  maxW="600px"
-                  gap={2}
-                  textAlign="center"
-                >
-                {characters[carouselIndex].metadata?.image ? (
-                  <Image
-                    alt={characters[carouselIndex].metadata?.name ?? 'Character image'}
-                    src={characters[carouselIndex].metadata?.image}
-                    width={600}
-                    height={340}
-                    style={{ objectFit: 'contain', borderRadius: 12, width: '100%', maxHeight: 360 }}
-                    unoptimized
-                  />
-                ) : null}
-                <Text color="white" fontWeight="700">
-                  {characters[carouselIndex].metadata?.name ??
-                    `${characters[carouselIndex].civilization} #${characters[carouselIndex].civilizationCharacterId}`}
-                </Text>
-                <Stack direction="row" flexWrap="wrap" justify="center" gap={3} color="gray.300" fontSize="sm">
-                  <Text>
-                    <Text as="span" fontWeight="700">
-                      Level:
-                    </Text>{' '}
-                    {resolvedLevel}
-                  </Text>
-                  {statsEntries.map(([key, value]) => (
-                    <Text key={key}>
-                      <Text as="span" fontWeight="700">
-                        {key.charAt(0).toUpperCase() + key.slice(1)}:
-                      </Text>{' '}
-                      {value}
-                    </Text>
-                  ))}
-                </Stack>
-                <Stack width="full" gap={2} align="center">
-                  <Stack direction="row" justify="space-between" color="gray.300" fontSize="sm" width="60%" maxW="420px">
-                    <Text>Energy</Text>
-                    <Text>{energyPercent !== undefined ? `${energyPercent}%` : '—'}</Text>
-                  </Stack>
-                  {currentEnergy !== undefined && maxEnergy ? (
-                    <Progress.Root
-                      shape="rounded"
-                      value={currentEnergy}
-                      max={maxEnergy}
-                      size="lg"
-                      width="60%"
-                      maxW="420px"
-                      paddingX={4}
-                      paddingY={2}
-                    >
-                      <Progress.Track background="custom-dark-primary" borderRadius="full">
-                        <Progress.Range background="custom-keppel" borderRadius="full" />
-                      </Progress.Track>
-                    </Progress.Root>
-                  ) : null}
-                </Stack>
-              </Stack>
-              )
-            })()}
+                const variants = {
+                  enter: (direction: 1 | -1) => ({
+                    x: direction > 0 ? 80 : -80,
+                    opacity: 0,
+                    scale: 0.98
+                  }),
+                  center: {
+                    x: 0,
+                    opacity: 1,
+                    scale: 1
+                  },
+                  exit: (direction: 1 | -1) => ({
+                    x: direction > 0 ? -80 : 80,
+                    opacity: 0,
+                    scale: 0.98
+                  })
+                }
+
+                return (
+                  <Box width="full" overflow="hidden" maxW="600px" paddingX={2} minHeight="520px">
+                    <AnimatePresence custom={direction} initial={false} mode="wait">
+                      <motion.div
+                        key={`${fadeKey}-${characters[carouselIndex].nftMint}`}
+                        custom={direction}
+                        variants={variants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                        style={{ width: '100%' }}
+                      >
+                        <Stack
+                          align="center"
+                          bg="rgba(0,0,0,0.4)"
+                          borderRadius="md"
+                          padding={10}
+                          gap={2}
+                          textAlign="center"
+                          width="full"
+                        >
+                          {selected.metadata?.image ? (
+                            <Image
+                              alt={selected.metadata?.name ?? 'Character image'}
+                              src={selected.metadata?.image}
+                              width={600}
+                              height={340}
+                              style={{ objectFit: 'contain', borderRadius: 16, width: '100%', maxHeight: 360 }}
+                              unoptimized
+                            />
+                          ) : null}
+                          <Text color="white" fontWeight="700">
+                            {selected.metadata?.name ?? `${selected.civilization} #${selected.civilizationCharacterId}`}
+                          </Text>
+                          <Stack
+                            direction="row"
+                            flexWrap="wrap"
+                            justify="center"
+                            gap={3}
+                            color="gray.300"
+                            fontSize="sm"
+                          >
+                            <Text>
+                              <Text as="span" fontWeight="700">
+                                Level:
+                              </Text>{' '}
+                              {resolvedLevel}
+                            </Text>
+                            {statsEntries.map(([key, value]) => (
+                              <Text key={key}>
+                                <Text as="span" fontWeight="700">
+                                  {key.charAt(0).toUpperCase() + key.slice(1)}:
+                                </Text>{' '}
+                                {value}
+                              </Text>
+                            ))}
+                          </Stack>
+                          <Stack width="full" gap={2} align="center">
+                            <Stack
+                              direction="row"
+                              justify="space-between"
+                              color="gray.300"
+                              fontSize="sm"
+                              width="60%"
+                              maxW="420px"
+                            >
+                              <Text>Energy</Text>
+                              <Text>{energyPercent !== undefined ? `${energyPercent}%` : '—'}</Text>
+                            </Stack>
+                            {currentEnergy !== undefined && maxEnergy ? (
+                              <Progress.Root
+                                shape="rounded"
+                                value={currentEnergy}
+                                max={maxEnergy}
+                                size="lg"
+                                width="60%"
+                                maxW="420px"
+                                paddingX={4}
+                                paddingY={2}
+                              >
+                                <Progress.Track background="custom-dark-primary">
+                                  <Progress.Range background="custom-keppel" />
+                                </Progress.Track>
+                              </Progress.Root>
+                            ) : null}
+                            <Button
+                              background="custom-blue"
+                              color="black"
+                              fontWeight="700"
+                              _hover={{ bg: 'white', color: 'black' }}
+                              width="30%"
+                              height="35px"
+                              maxW="420px"
+                              onClick={() => router.push(`/character/${selected.nftMint}`)}
+                            >
+                              Play
+                            </Button>
+                          </Stack>
+                        </Stack>
+                      </motion.div>
+                    </AnimatePresence>
+                  </Box>
+                )
+              })()}
             <IconButton
               size="md"
               variant="ghost"
@@ -557,7 +632,14 @@ export function PlayContent() {
               paddingX={2}
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
-                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <title>ChevronRight</title>
+                <path
+                  d="M9 6l6 6-6 6"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </IconButton>
           </Stack>
@@ -578,7 +660,9 @@ export function PlayContent() {
           zIndex={2000}
           onClick={() => setShowMintModal(false)}
         >
-          <Box onClick={(e) => e.stopPropagation()}>{mintSection({ onClose: () => setShowMintModal(false), showCancel: true })}</Box>
+          <Box onClick={(e) => e.stopPropagation()}>
+            {mintSection({ onClose: () => setShowMintModal(false), showCancel: true })}
+          </Box>
         </Box>
       )}
     </Stack>
