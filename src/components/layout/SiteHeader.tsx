@@ -26,12 +26,6 @@ export function SiteHeader() {
   const walletAddress = useMemo(() => publicKey?.toBase58() ?? null, [publicKey])
 
   useEffect(() => {
-    if (sessionStatus === 'authenticated' && pathname === '/') {
-      router.replace('/play')
-    }
-  }, [pathname, router, sessionStatus])
-
-  useEffect(() => {
     if (sessionStatus === 'loading') return
 
     if (!connected || !publicKey) {
@@ -107,7 +101,7 @@ export function SiteHeader() {
     return () => {
       cancelled = true
     }
-  }, [connected, disconnect, walletAddress, router, session?.user?.address, sessionStatus, signMessage])
+  }, [connected, disconnect, walletAddress, router, session?.user?.address, sessionStatus, signMessage, publicKey])
 
   useEffect(() => {
     if (sessionStatus !== 'authenticated') {
@@ -130,7 +124,7 @@ export function SiteHeader() {
     }
 
     void forceLogout()
-  }, [connected, walletAddress, router, sessionStatus, signOut])
+  }, [connected, walletAddress, router, sessionStatus])
 
   useEffect(() => {
     if (sessionStatus !== 'authenticated') return
@@ -151,7 +145,7 @@ export function SiteHeader() {
     }
 
     void resetSession()
-  }, [session?.user?.address, sessionStatus, walletAddress, signOut])
+  }, [session?.user?.address, sessionStatus, walletAddress])
 
   useEffect(() => {
     const authority = session?.user?.address
@@ -225,14 +219,14 @@ export function SiteHeader() {
       )}
       <HStack align="center" justify="space-between" paddingX={{ base: 4, md: 10 }} paddingY={{ base: 3, md: 2 }}>
         <Flex alignItems="center" height="80px" width="40px">
-          <AppLink href="/">
+          <AppLink href={isAuthed ? '/play' : '/'}>
             <Image alt="Arising Logo Top" height="768" src="/assets/logo-top.webp" width="484" priority />
           </AppLink>
         </Flex>
 
         {isAuthed && (
           <HStack>
-            {hasCharacters && (
+            {hasCharacters && !pathname?.startsWith('/character') && (
               <Button
                 onClick={handleMintClick}
                 background="custom-blue"

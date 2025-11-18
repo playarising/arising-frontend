@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { AppLink } from '@/components'
 import {
   findCharacterMintPda,
   findCharacterPda,
@@ -598,18 +599,20 @@ export function PlayContent() {
                                 </Progress.Track>
                               </Progress.Root>
                             ) : null}
-                            <Button
-                              background="custom-blue"
-                              color="black"
-                              fontWeight="700"
-                              _hover={{ bg: 'white', color: 'black' }}
-                              width="30%"
-                              height="35px"
-                              maxW="420px"
-                              onClick={() => router.push(`/character/${selected.nftMint}`)}
-                            >
-                              Play
-                            </Button>
+                            <Box width="60%" maxW="420px">
+                              <AppLink href={`/character/${selected.nftMint}`}>
+                                <Button
+                                  background="custom-blue"
+                                  color="black"
+                                  fontWeight="700"
+                                  _hover={{ bg: 'white', color: 'black' }}
+                                  width="100%"
+                                  height="35px"
+                                >
+                                  Play
+                                </Button>
+                              </AppLink>
+                            </Box>
                           </Stack>
                         </Stack>
                       </motion.div>

@@ -1,7 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Cinzel, Montserrat } from 'next/font/google'
-import { SiteHeader, StructuredData } from '@/components'
+import { SiteHeader, StructuredData, TopLoader } from '@/components'
 import { Providers } from '@/providers'
 
 const MONTSERRAT = Montserrat({ variable: '--font-montserrat', subsets: ['latin', 'latin-ext'] })
@@ -116,6 +116,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <Providers>
+          <TopLoader />
           <main style={{ position: 'relative', overflowX: 'hidden' }}>
             <SiteHeader />
             {children}

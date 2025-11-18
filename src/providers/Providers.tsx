@@ -7,7 +7,6 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare'
 import { TorusWalletAdapter } from '@solana/wallet-adapter-torus'
 import { SessionProvider } from 'next-auth/react'
-import NextTopLoader from 'nextjs-toploader'
 import { type ReactNode, useMemo } from 'react'
 import '@solana/wallet-adapter-react-ui/styles.css'
 
@@ -45,7 +44,6 @@ export function Providers({ children }: { children: ReactNode }) {
         <ConnectionProvider endpoint={endpoint}>
           <WalletProvider autoConnect wallets={wallets}>
             <WalletModalProvider>
-              <NextTopLoader color="#00f0ff" height={3} showSpinner={false} />
               {children}
             </WalletModalProvider>
           </WalletProvider>
