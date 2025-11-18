@@ -7,7 +7,6 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
 import { AnimatePresence, motion } from 'framer-motion'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { AppLink } from '@/components'
 import {
@@ -135,7 +134,6 @@ export function PlayContent() {
   const { connection } = useConnection()
   const { publicKey, signTransaction, connected } = useWallet()
   const { setVisible } = useWalletModal()
-  const router = useRouter()
 
   const [characters, setCharacters] = useState<CharacterWithMetadata[]>([])
   const [loadingCharacters, setLoadingCharacters] = useState(false)

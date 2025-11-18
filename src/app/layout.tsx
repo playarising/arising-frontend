@@ -1,3 +1,4 @@
+import { ClientOnly } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Cinzel, Montserrat } from 'next/font/google'
@@ -115,13 +116,15 @@ export default function RootLayout({
         <Analytics />
       </head>
       <body suppressHydrationWarning>
-        <Providers>
-          <TopLoader />
-          <main style={{ position: 'relative', overflowX: 'hidden' }}>
-            <SiteHeader />
-            {children}
-          </main>
-        </Providers>
+        <TopLoader />
+        <ClientOnly>
+          <Providers>
+            <main style={{ position: 'relative', overflowX: 'hidden' }}>
+              <SiteHeader />
+              {children}
+            </main>
+          </Providers>
+        </ClientOnly>
       </body>
     </html>
   )

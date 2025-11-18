@@ -17,7 +17,9 @@ export default async function CharacterPage({ params }: { params: Params }) {
   const character = owned.find((c) => c.nftMint === mint)
   if (!character) notFound()
 
-  const metadata = await fetchCharacterMetadata(character.civilization, character.civilizationCharacterId).catch(() => undefined)
+  const metadata = await fetchCharacterMetadata(character.civilization, character.civilizationCharacterId).catch(
+    () => undefined
+  )
 
   return (
     <Stack align="center" justify="center" minH="100vh" bg="black" paddingY={16} paddingX={6}>
