@@ -417,14 +417,7 @@ export function PlayContent() {
               Your characters
             </Text>
           </Box>
-          <Stack
-            mt="7"
-            direction={{ base: 'column', md: 'row' }}
-            align="center"
-            justify="space-between"
-            gap={4}
-            width="full"
-          >
+          <Stack mt="7" direction={{ base: 'row', md: 'row' }} align="center" justify="space-between" gap={{ base: 2, md: 4 }} width="full">
             <IconButton
               size="md"
               variant="ghost"
@@ -495,9 +488,9 @@ export function PlayContent() {
 
                 const variants = {
                   enter: (direction: 1 | -1) => ({
-                    x: direction > 0 ? 80 : -80,
+                    x: direction > 0 ? 60 : -60,
                     opacity: 0,
-                    scale: 0.98
+                    scale: 0.99
                   }),
                   center: {
                     x: 0,
@@ -505,14 +498,14 @@ export function PlayContent() {
                     scale: 1
                   },
                   exit: (direction: 1 | -1) => ({
-                    x: direction > 0 ? -80 : 80,
+                    x: direction > 0 ? -60 : 60,
                     opacity: 0,
-                    scale: 0.98
+                    scale: 0.99
                   })
                 }
 
                 return (
-                  <Box width="full" overflow="hidden" maxW="600px" paddingX={2} minHeight="520px">
+                <Box width="full" overflow="hidden" maxW="600px" paddingX={{ base: 1, md: 2 }} minHeight="420px">
                     <AnimatePresence custom={direction} initial={false} mode="wait">
                       <motion.div
                         key={`${fadeKey}-${characters[carouselIndex].nftMint}`}
@@ -521,17 +514,17 @@ export function PlayContent() {
                         initial="enter"
                         animate="center"
                         exit="exit"
-                        transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                        transition={{ duration: 0.18, ease: 'easeInOut' }}
                         style={{ width: '100%' }}
                       >
                         <Stack
-                          align="center"
-                          bg="rgba(0,0,0,0.4)"
-                          borderRadius="md"
-                          padding={10}
-                          gap={2}
-                          textAlign="center"
-                          width="full"
+                        align="center"
+                        bg="rgba(0,0,0,0.4)"
+                        borderRadius="xl"
+                        padding={{ base: 4, md: 10 }}
+                        gap={2}
+                        textAlign="center"
+                        width="full"
                         >
                           {selected.metadata?.image ? (
                             <Image
@@ -570,14 +563,14 @@ export function PlayContent() {
                             ))}
                           </Stack>
                           <Stack width="full" gap={2} align="center">
-                            <Stack
-                              direction="row"
-                              justify="space-between"
-                              color="gray.300"
-                              fontSize="sm"
-                              width="60%"
-                              maxW="420px"
-                            >
+                          <Stack
+                            direction="row"
+                            justify="space-between"
+                            color="gray.300"
+                            fontSize="sm"
+                            width={{ base: '90%', md: '60%' }}
+                            maxW="420px"
+                          >
                               <Text>Energy</Text>
                               <Text>{energyPercent !== undefined ? `${energyPercent}%` : '—'}</Text>
                             </Stack>
@@ -587,17 +580,17 @@ export function PlayContent() {
                                 value={currentEnergy}
                                 max={maxEnergy}
                                 size="lg"
-                                width="60%"
-                                maxW="420px"
-                                paddingX={4}
-                                paddingY={2}
-                              >
+                              width={{ base: '90%', md: '60%' }}
+                              maxW="420px"
+                              paddingX={4}
+                              paddingY={2}
+                            >
                                 <Progress.Track background="custom-dark-primary">
                                   <Progress.Range background="custom-keppel" />
                                 </Progress.Track>
                               </Progress.Root>
                             ) : null}
-                            <Box width="60%" maxW="420px">
+                            <Box width={{ base: '90%', md: '60%' }} maxW="420px">
                               <AppLink href={`/character/${selected.nftMint}`}>
                                 <Button
                                   background="custom-blue"
