@@ -20,14 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
     return clusterApiUrl(WalletAdapterNetwork.Devnet)
   }, [])
 
-  const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new BackpackWalletAdapter(),
-      new TorusWalletAdapter()
-    ],
-    []
-  )
+  const wallets = useMemo(() => [new PhantomWalletAdapter(), new BackpackWalletAdapter(), new TorusWalletAdapter()], [])
 
   return (
     <ThemeProvider>

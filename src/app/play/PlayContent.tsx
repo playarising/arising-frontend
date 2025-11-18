@@ -41,12 +41,12 @@ const CIV_INDEX: Record<(typeof CIVS)[number], number> = {
 const CIV_LORE: Record<(typeof CIVS)[number], { summary: string; classes: string[] }> = {
   Ard: {
     summary:
-      'A feudal human realm on Rhuvonor, forged by oaths and spearheaded from the city of Ard. Honor, heavy steel, and disciplined armies define their way of life.',
+      'Human war-culture of Rhuvonor whose cities are built around arenas and seasonal wars. Ard live to “dance with the goddess” in duels and campaigns, turning every craft and tradition toward perfecting the art of battle.',
     classes: ['Knight — a shielded bulwark on the front line.', 'Templar — a holy blade that blends faith and steel.']
   },
   Hartenn: {
     summary:
-      'Dwarves who safeguard the Eternal Flame and the “language of the gods.” Master smiths and stoic veterans of ancient wars, now fiercely protective of their halls.',
+      'Short, heavily furred folk of Hartheim who carved warm fortress-cities into the frozen peaks of Tark. In their matriarchal society, eye color marks one’s calling, and endurance, community, and stubborn resilience are sacred virtues.',
     classes: [
       'Engineer — a tactician who fights with inventions.',
       'Warden — an immovable guardian who holds the line.'
@@ -54,7 +54,7 @@ const CIV_LORE: Record<(typeof CIVS)[number], { summary: string; classes: string
   },
   "I'karan": {
     summary:
-      'DeAkki elves of Avos who treat nature as sacred, living among colossal trees and hidden waterways. They can shift between their true form and an elegant chosen guise.',
+      'Ancient I’kara of Avos: persecuted shapeshifters whose true form is sinew and translucent skin, and whose chosen form is tall and elegant. They live in cities grown from colossal trees, mangrove ruins and stone bastions, hiding their faces behind masks that are only removed for trust… or for the kill.',
     classes: [
       'Ranger — a hunter-scout who strikes from range.',
       'Druid — a nature caster who bends the wilds to their will.'
@@ -62,7 +62,7 @@ const CIV_LORE: Record<(typeof CIVS)[number], { summary: string; classes: string
   },
   Zhand: {
     summary:
-      'Bronze-skinned desert elves of Zhan, led by matriarchs who rule from caravan to port. Traders, travelers, and survivors who read the sands like scripture.',
+      'Desert-hardened elves descended from exiled I’kara, now dwelling in the sands of Zhan. Organized in matriarchal clans, they raise acid-forged sand domes, revere water as sacred, and thrive as caravaners, trackers and traders across Rhuvonor’s harshest wastes.',
     classes: [
       'Sandblade — a swift duelist who dances through combat.',
       'Seer — a mystic who reads the dunes and spirits.'
@@ -70,18 +70,19 @@ const CIV_LORE: Record<(typeof CIVS)[number], { summary: string; classes: string
   },
   Shinkari: {
     summary:
-      'Eastern humans of Xian, bound by strict hierarchy, ritual, and relentless discipline. Their culture is sharpened by warfare and devotion to ancestral codes.',
+      'People of Akun, a continent of flowers, mountains and strict etiquette, where every gesture and word is shaped by ritual. After the last emperor’s death and the split between twin heirs, Shinkari clans vie for influence through trade, poetry and war, all bound by layered social codes.',
     classes: ['Samurai — a precise swordsman bound by code.', 'Onmyoji — a mage who commands spirits and talismans.']
   },
   "Tark'i": {
     summary:
-      'Sea-weathered clans of Tark with viking and celtic roots. They raid, trade, and rally under oaths between villages instead of a crown.',
+      'Towering humans of the frozen continent of Tark, hardened by nine-month winters and lethal hunts. In close-knit villages they prize music, family and nights around the fire, but will raid sea and ice as hunters, pirates or mercenaries — even invoking the berserk Beniak trance — to keep their people alive.',
     classes: [
       'Raider — an agile skirmisher who raids and retreats.',
       'Skald — a battle bard whose songs empower allies.'
     ]
   }
 }
+
 const CivSelect = chakra('select')
 
 const deriveMetadataPda = (mint: PublicKey) =>
@@ -417,7 +418,14 @@ export function PlayContent() {
               Your characters
             </Text>
           </Box>
-          <Stack mt="7" direction={{ base: 'row', md: 'row' }} align="center" justify="space-between" gap={{ base: 2, md: 4 }} width="full">
+          <Stack
+            mt="7"
+            direction={{ base: 'row', md: 'row' }}
+            align="center"
+            justify="space-between"
+            gap={{ base: 2, md: 4 }}
+            width="full"
+          >
             <IconButton
               size="md"
               variant="ghost"
@@ -505,7 +513,7 @@ export function PlayContent() {
                 }
 
                 return (
-                <Box width="full" overflow="hidden" maxW="600px" paddingX={{ base: 1, md: 2 }} minHeight="420px">
+                  <Box width="full" overflow="hidden" maxW="600px" paddingX={{ base: 1, md: 2 }} minHeight="420px">
                     <AnimatePresence custom={direction} initial={false} mode="wait">
                       <motion.div
                         key={`${fadeKey}-${characters[carouselIndex].nftMint}`}
@@ -518,13 +526,13 @@ export function PlayContent() {
                         style={{ width: '100%' }}
                       >
                         <Stack
-                        align="center"
-                        bg="rgba(0,0,0,0.4)"
-                        borderRadius="xl"
-                        padding={{ base: 4, md: 10 }}
-                        gap={2}
-                        textAlign="center"
-                        width="full"
+                          align="center"
+                          bg="rgba(0,0,0,0.4)"
+                          borderRadius="xl"
+                          padding={{ base: 4, md: 10 }}
+                          gap={2}
+                          textAlign="center"
+                          width="full"
                         >
                           {selected.metadata?.image ? (
                             <Image
@@ -563,14 +571,14 @@ export function PlayContent() {
                             ))}
                           </Stack>
                           <Stack width="full" gap={2} align="center">
-                          <Stack
-                            direction="row"
-                            justify="space-between"
-                            color="gray.300"
-                            fontSize="sm"
-                            width={{ base: '90%', md: '60%' }}
-                            maxW="420px"
-                          >
+                            <Stack
+                              direction="row"
+                              justify="space-between"
+                              color="gray.300"
+                              fontSize="sm"
+                              width={{ base: '90%', md: '60%' }}
+                              maxW="420px"
+                            >
                               <Text>Energy</Text>
                               <Text>{energyPercent !== undefined ? `${energyPercent}%` : '—'}</Text>
                             </Stack>
@@ -580,11 +588,11 @@ export function PlayContent() {
                                 value={currentEnergy}
                                 max={maxEnergy}
                                 size="lg"
-                              width={{ base: '90%', md: '60%' }}
-                              maxW="420px"
-                              paddingX={4}
-                              paddingY={2}
-                            >
+                                width={{ base: '90%', md: '60%' }}
+                                maxW="420px"
+                                paddingX={4}
+                                paddingY={2}
+                              >
                                 <Progress.Track background="custom-dark-primary">
                                   <Progress.Range background="custom-keppel" />
                                 </Progress.Track>
