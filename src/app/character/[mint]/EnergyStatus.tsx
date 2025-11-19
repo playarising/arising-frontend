@@ -37,7 +37,14 @@ export function EnergyStatus({ energy, maxEnergy, nextRefillEpochSeconds }: Prop
 
   return (
     <Stack gap={2} align="center" width="full">
-      <Stack direction="row" justify="space-between" color="gray.300" fontSize="sm" width="full" maxW="320px">
+      <Stack
+        direction="row"
+        justify="space-between"
+        color="gray.300"
+        fontSize="sm"
+        width="full"
+        maxW={{ base: 'full', sm: '320px' }}
+      >
         <Text>Energy</Text>
         <Text>{energyPercent}%</Text>
       </Stack>
@@ -47,7 +54,7 @@ export function EnergyStatus({ energy, maxEnergy, nextRefillEpochSeconds }: Prop
         max={maxEnergy}
         size="lg"
         width="full"
-        maxW="320px"
+        maxW={{ base: 'full', sm: '320px' }}
         paddingX={4}
         paddingY={2}
       >
@@ -63,6 +70,7 @@ export function EnergyStatus({ energy, maxEnergy, nextRefillEpochSeconds }: Prop
         _hover={{ bg: 'white', color: 'black' }}
         cursor={refillAvailable ? 'pointer' : 'not-allowed'}
         disabled={!refillAvailable}
+        width={{ base: 'full', sm: 'auto' }}
       >
         {refillAvailable ? 'Refill Energy' : 'Refill available in'}
       </Button>

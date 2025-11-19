@@ -1,10 +1,11 @@
-import { Accordion, Box, Button, Grid, GridItem, Stack, Text } from '@chakra-ui/react'
+import { Accordion, Box, Button, Flex, Grid, GridItem, Progress, Stack, Text } from '@chakra-ui/react'
 import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { Connection, clusterApiUrl, PublicKey } from '@solana/web3.js'
 import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import {
+  LEVEL_CURVE,
   authOptions,
   fetchCharacterMetadata,
   fetchCharactersForAuthority,
@@ -46,12 +47,32 @@ export default async function CharacterPage({ params }: { params: Params }) {
       : typeof character.lastEnergyRefill === 'number'
         ? character.lastEnergyRefill
         : 0
+  const rawExperience =
+    typeof character.experience === 'string'
+      ? Number.parseInt(character.experience, 10)
+      : typeof character.experience === 'number'
+        ? character.experience
+        : null
+  const hasExperienceData = rawExperience !== null && Number.isFinite(rawExperience)
+  const totalExperience = hasExperienceData ? Number(rawExperience) : 0
   const characterLevel =
-    Number.isFinite(character.experience) && character.experience !== null
-      ? levelFromExperience(character.experience ?? 0)
+    hasExperienceData
+      ? levelFromExperience(totalExperience)
       : Number.isFinite(metadataLevelNumber)
         ? Number(metadataLevelNumber)
         : 1
+  const prevThreshold =
+    characterLevel > 1 ? LEVEL_CURVE.find((entry) => entry.level === characterLevel - 1)?.cumulativeXp ?? 0 : 0
+  const currentCurveEntry = LEVEL_CURVE.find((entry) => entry.level === characterLevel)
+  const xpNeededThisLevel = currentCurveEntry?.xpToNext ?? 0
+  const xpIntoCurrentLevel = hasExperienceData ? Math.max(0, totalExperience - prevThreshold) : 0
+  const clampedXpProgress = Math.min(xpNeededThisLevel, xpIntoCurrentLevel)
+  const xpProgressPercent = hasExperienceData
+    ? xpNeededThisLevel > 0
+      ? Math.max(0, Math.min(100, Math.round((clampedXpProgress / xpNeededThisLevel) * 100)))
+      : 100
+    : 0
+  const xpRemaining = xpNeededThisLevel > 0 ? Math.max(0, xpNeededThisLevel - clampedXpProgress) : 0
   const maxEnergy = 10 + (characterLevel - 1)
   const REFILL_COOLDOWN_SECONDS = 24 * 60 * 60
   const nextRefillSeconds = parsedLastRefill + REFILL_COOLDOWN_SECONDS
@@ -124,7 +145,8 @@ export default async function CharacterPage({ params }: { params: Params }) {
     energyCost: q.baseEnergyCost,
     type: q.questType,
     rewards: q.rewards,
-    requirements: q.minimumStats
+    requirements: q.minimumStats,
+    durationSeconds: q.cooldownSeconds
   }))
 
   const recipesForClient = availableRecipes.map((r) => ({
@@ -134,7 +156,8 @@ export default async function CharacterPage({ params }: { params: Params }) {
     type: r.recipeType,
     energyCost: r.baseEnergyCost,
     input: r.input,
-    output: r.output
+    output: r.output,
+    durationSeconds: r.cooldownSeconds
   }))
 
   const resourceMintMap = new Map(
@@ -370,9 +393,9 @@ export default async function CharacterPage({ params }: { params: Params }) {
           <Accordion.ItemContent>
             <Accordion.ItemBody paddingX={3} paddingY={3}>
               {inventoryBalances.length ? (
-                <Stack gap={2} color="gray.300" fontSize="sm">
+                <Stack gap={2} color="gray.300" fontSize="sm" width="full">
                   {inventoryBalances.map((item) => (
-                    <Stack
+                    <Flex
                       key={item.mint}
                       direction="row"
                       justify="space-between"
@@ -381,14 +404,24 @@ export default async function CharacterPage({ params }: { params: Params }) {
                       borderRadius="md"
                       padding={3}
                       bg="rgba(255,255,255,0.02)"
+                      width="full"
+                      gap={3}
                     >
-                      <Text color="white" fontWeight="700">
+                      <Text
+                        color="white"
+                        fontWeight="700"
+                        flex="1 1 auto"
+                        whiteSpace="nowrap"
+                        overflow="hidden"
+                        textOverflow="ellipsis"
+                        textAlign="left"
+                      >
                         {item.displayName}
                       </Text>
-                      <Text color="gray.200" fontWeight="700">
+                      <Text color="gray.200" fontWeight="700" flexShrink={0}>
                         {item.amount}
                       </Text>
-                    </Stack>
+                    </Flex>
                   ))}
                 </Stack>
               ) : (
@@ -431,7 +464,15 @@ export default async function CharacterPage({ params }: { params: Params }) {
   )
 
   return (
-    <Stack align="center" justify="center" minH="100vh" bg="black" paddingY={16} paddingX={{ base: 4, md: 8 }}>
+    <Stack
+      align="center"
+      justify="center"
+      minH="100vh"
+      bg="black"
+      paddingY={16}
+      paddingX={{ base: 4, md: 8 }}
+      paddingTop={{ base: 28, md: 36 }}
+    >
       <Grid templateColumns={{ base: '1fr', lg: '1fr 3fr' }} gap={{ base: 6, lg: 10 }} width="full" maxW="1200px">
         <GridItem>
           <Stack
@@ -462,6 +503,40 @@ export default async function CharacterPage({ params }: { params: Params }) {
             <Text color="gray.300" fontSize="sm">
               Level {characterLevel}
             </Text>
+            <Stack width="full" gap={1}>
+              <Flex width="full" justify="space-between" align="center">
+                <Text color="gray.400" fontSize="xs" fontWeight="600">
+                  Experience
+                </Text>
+                {hasExperienceData ? (
+                  xpNeededThisLevel > 0 ? (
+                    <Text color="gray.100" fontSize="xs" fontWeight="700">
+                      {clampedXpProgress.toLocaleString()} / {xpNeededThisLevel.toLocaleString()} XP
+                    </Text>
+                  ) : (
+                    <Text color="gray.100" fontSize="xs" fontWeight="700">
+                      {totalExperience.toLocaleString()} XP
+                    </Text>
+                  )
+                ) : (
+                  <Text color="gray.500" fontSize="xs">
+                    XP data unavailable
+                  </Text>
+                )}
+              </Flex>
+              <Progress.Root shape="rounded" value={xpProgressPercent} max={100} size="md" width="full">
+                <Progress.Track background="custom-dark-primary">
+                  <Progress.Range background="custom-keppel" />
+                </Progress.Track>
+              </Progress.Root>
+              <Text color="gray.500" fontSize="xs">
+                {hasExperienceData
+                  ? xpNeededThisLevel > 0
+                    ? `${xpRemaining.toLocaleString()} XP to level up`
+                    : 'Maximum level reached'
+                  : 'Level progression unavailable'}
+              </Text>
+            </Stack>
             <EnergyStatus energy={parsedEnergy} maxEnergy={maxEnergy} nextRefillEpochSeconds={nextRefillSeconds} />
             {renderStatsAccordions('overview', {
               includeAttributes: true,

@@ -1,6 +1,6 @@
 'use client'
 
-import { Badge, Box, Button, Flex, Progress, Stack, Text } from '@chakra-ui/react'
+import { Badge, Box, Button, Flex, Grid, Progress, Stack, Text } from '@chakra-ui/react'
 import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
@@ -41,6 +41,7 @@ export type ActionsSwitcherProps = {
     type: string
     rewards?: QuestReward[]
     requirements?: Record<string, number>
+    durationSeconds?: number
   }[]
   recipes: {
     id: number
@@ -50,6 +51,7 @@ export type ActionsSwitcherProps = {
     energyCost: number
     input?: RecipeInput
     output?: RecipeOutput
+    durationSeconds?: number
   }[]
   codexResourceMints: CodexResourceMint[]
   characterLevel: number
@@ -491,6 +493,7 @@ export function ActionsSwitcher({
         bg="rgba(255,255,255,0.02)"
         _hover={{ bg: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.2)' }}
         transition="all 0.2s"
+        width="full"
       >
         <Stack gap={3}>
           <Text color="white" fontWeight="800" fontSize="md">
@@ -508,6 +511,11 @@ export function ActionsSwitcher({
               <Badge colorScheme="yellow" fontSize="xs" px={2} py={0.5}>
                 {quest.energyCost} Energy
               </Badge>
+              {quest.durationSeconds && quest.durationSeconds > 0 ? (
+                <Badge colorScheme="purple" fontSize="xs" px={2} py={0.5}>
+                  Time {formatDuration(Math.round(quest.durationSeconds))}
+                </Badge>
+              ) : null}
             </Flex>
           </Box>
 
@@ -586,6 +594,7 @@ export function ActionsSwitcher({
           bg="rgba(255,255,255,0.02)"
           _hover={{ bg: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.2)' }}
           transition="all 0.2s"
+          width="full"
         >
           <Stack gap={3}>
             <Text color="white" fontWeight="800" fontSize="md">
@@ -603,6 +612,11 @@ export function ActionsSwitcher({
                 <Badge colorScheme="yellow" fontSize="xs" px={2} py={0.5}>
                   {recipe.energyCost} Energy
                 </Badge>
+                {recipe.durationSeconds && recipe.durationSeconds > 0 ? (
+                  <Badge colorScheme="purple" fontSize="xs" px={2} py={0.5}>
+                    Time {formatDuration(Math.round(recipe.durationSeconds))}
+                  </Badge>
+                ) : null}
               </Flex>
             </Box>
 
@@ -672,6 +686,7 @@ export function ActionsSwitcher({
           bg="rgba(255,255,255,0.02)"
           _hover={{ bg: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.2)' }}
           transition="all 0.2s"
+          width="full"
         >
           <Stack gap={3}>
             <Text color="white" fontWeight="800" fontSize="md">
@@ -689,6 +704,11 @@ export function ActionsSwitcher({
                 <Badge colorScheme="yellow" fontSize="xs" px={2} py={0.5}>
                   {recipe.energyCost} Energy
                 </Badge>
+                {recipe.durationSeconds && recipe.durationSeconds > 0 ? (
+                  <Badge colorScheme="purple" fontSize="xs" px={2} py={0.5}>
+                    Time {formatDuration(Math.round(recipe.durationSeconds))}
+                  </Badge>
+                ) : null}
               </Flex>
             </Box>
 
@@ -820,14 +840,30 @@ export function ActionsSwitcher({
 
   return (
     <Stack gap={4} width="full">
-      <Stack direction="row" align="center" justify="space-between">
+      <Grid
+        templateColumns="auto minmax(0, 1fr) auto"
+        alignItems="center"
+        gap={{ base: 2, md: 0 }}
+        width="full"
+      >
         <Box as="button" aria-label="Previous view" background="transparent" _hover={{ opacity: 0.7 }} onClick={goPrev}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
             <title>ChevronLeft</title>
             <path d="M15 6l-6 6 6 6" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Box>
-        <Stack direction="row" align="center" gap={3} color="white" fontWeight="700" fontSize="md">
+        <Stack
+          direction="row"
+          align="center"
+          justify="center"
+          gap={2}
+          flex="1 1 auto"
+          flexWrap={{ base: 'wrap', sm: 'nowrap' }}
+          color="white"
+          fontWeight="700"
+          fontSize={{ base: 'sm', md: 'md' }}
+          textAlign="center"
+        >
           {headerItem('Quests', isQuests)}
           <Text color="gray.500">|</Text>
           {headerItem('Craft', isCraft)}
@@ -840,9 +876,9 @@ export function ActionsSwitcher({
             <path d="M9 6l6 6-6 6" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Box>
-      </Stack>
+      </Grid>
 
-      <Stack gap={3} color="gray.500" fontSize="sm">
+      <Stack gap={3} color="gray.500" fontSize="sm" width="full">
         {hasContent ? content : <Text>None</Text>}
       </Stack>
     </Stack>

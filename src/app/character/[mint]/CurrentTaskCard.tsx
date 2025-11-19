@@ -48,7 +48,15 @@ export const CurrentTaskCard = ({
 
       {progress ? (
         <>
-          <Progress.Root shape="rounded" value={progress.percent} max={100} size="lg" width="full" paddingX={4} paddingY={2}>
+          <Progress.Root
+            shape="rounded"
+            value={progress.percent}
+            max={100}
+            size="lg"
+            width="full"
+            paddingX={{ base: 2, sm: 4 }}
+            paddingY={{ base: 1, sm: 2 }}
+          >
             <Progress.Track background="custom-dark-primary">
               <Progress.Range background="custom-keppel" />
             </Progress.Track>

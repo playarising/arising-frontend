@@ -1,7 +1,7 @@
 'use client'
 
 import { Buffer } from 'node:buffer'
-import { Box, Button, CloseButton, chakra, IconButton, Progress, Spinner, Stack, Text } from '@chakra-ui/react'
+import { Badge, Box, Button, CloseButton, chakra, IconButton, Progress, Spinner, Stack, Text } from '@chakra-ui/react'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
@@ -599,28 +599,28 @@ export function PlayContent() {
                           <Text color="white" fontWeight="700">
                             {selected.metadata?.name ?? `${selected.civilization} #${selected.civilizationCharacterId}`}
                           </Text>
-                          <Stack
-                            direction="row"
-                            flexWrap="wrap"
-                            justify="center"
-                            gap={3}
-                            color="gray.300"
-                            fontSize="sm"
-                          >
+                          <Stack align="center" gap={2} color="gray.300" fontSize="sm" width="full">
                             <Text>
                               <Text as="span" fontWeight="700">
                                 Level:
                               </Text>{' '}
                               {resolvedLevel}
                             </Text>
-                            {statsEntries.map(([key, value]) => (
-                              <Text key={key}>
-                                <Text as="span" fontWeight="700">
-                                  {key.charAt(0).toUpperCase() + key.slice(1)}:
-                                </Text>{' '}
-                                {value}
-                              </Text>
-                            ))}
+                            {statsEntries.length ? (
+                              <Stack
+                                direction="row"
+                                flexWrap="wrap"
+                                justify="center"
+                                gap={2}
+                                width="full"
+                              >
+                                {statsEntries.map(([key, value]) => (
+                                  <Badge key={key} colorScheme="purple" fontSize="xs" px={2} py={0.5}>
+                                    {key.charAt(0).toUpperCase() + key.slice(1)} {value}
+                                  </Badge>
+                                ))}
+                              </Stack>
+                            ) : null}
                           </Stack>
                           <Stack width="full" gap={2} align="center">
                             <Stack
