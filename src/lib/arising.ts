@@ -273,6 +273,7 @@ export const claimQuestIx = (
     associatedTokenProgram?: PublicKey
     systemProgram?: PublicKey
     rent?: PublicKey
+    remainingAccounts?: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[]
   },
   programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
@@ -290,7 +291,8 @@ export const claimQuestIx = (
         isSigner: false
       },
       { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false },
-      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }
+      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      ...(accounts.remainingAccounts ?? [])
     ],
     programId
   )
@@ -305,6 +307,7 @@ export const claimRecipeIx = (
     associatedTokenProgram?: PublicKey
     systemProgram?: PublicKey
     rent?: PublicKey
+    remainingAccounts?: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[]
   },
   programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
@@ -322,7 +325,8 @@ export const claimRecipeIx = (
         isSigner: false
       },
       { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false },
-      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }
+      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      ...(accounts.remainingAccounts ?? [])
     ],
     programId
   )
@@ -562,6 +566,7 @@ export const startRecipeIx = (
     associatedTokenProgram?: PublicKey
     systemProgram?: PublicKey
     rent?: PublicKey
+    remainingAccounts?: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[]
   },
   programId: PublicKey = ARISING_PROGRAM_ID
 ) =>
@@ -579,7 +584,8 @@ export const startRecipeIx = (
         isSigner: false
       },
       { pubkey: accounts.systemProgram ?? SystemProgram.programId, isWritable: false, isSigner: false },
-      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }
+      { pubkey: accounts.rent ?? SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      ...(accounts.remainingAccounts ?? [])
     ],
     programId
   )

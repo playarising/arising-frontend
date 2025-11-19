@@ -344,6 +344,7 @@ export default async function CharacterPage({ params }: { params: Params }) {
           recipeState={resolvedRecipeState}
           codexQuests={codex.quests}
           codexRecipes={codex.recipes}
+          codexResourceMints={codex.resourceMints}
           civilization={character.civilization}
           civilizationCharacterId={character.civilizationCharacterId}
         />
@@ -384,12 +385,9 @@ export default async function CharacterPage({ params }: { params: Params }) {
                       <Text color="white" fontWeight="700">
                         {item.displayName}
                       </Text>
-                      <Stack align="flex-end">
-                        <Text color="gray.200">{item.amount}</Text>
-                        <Text color="gray.500" fontSize="xs">
-                          {item.mint}
-                        </Text>
-                      </Stack>
+                      <Text color="gray.200" fontWeight="700">
+                        {item.amount}
+                      </Text>
                     </Stack>
                   ))}
                 </Stack>
@@ -486,6 +484,7 @@ export default async function CharacterPage({ params }: { params: Params }) {
             <ActionsSwitcher
               quests={questsForClient}
               recipes={recipesForClient}
+              codexResourceMints={codex.resourceMints}
               characterLevel={characterLevel}
               characterEnergy={parsedEnergy}
               characterStats={Object.fromEntries(parsedStatsEntries)}

@@ -39,7 +39,7 @@ export const RewardBadges = ({ value }: { value: QuestReward[] | unknown }) => {
   const parsed = parseJson(value)
   if (Array.isArray(parsed)) {
     return (
-      <Flex gap={1} flexWrap="wrap" justifyContent="center">
+      <Flex gap={1} flexWrap="wrap" justifyContent="flex-start">
         {parsed.map((item, idx) => {
           if (item && typeof item === 'object') {
             const obj = item as Record<string, unknown>

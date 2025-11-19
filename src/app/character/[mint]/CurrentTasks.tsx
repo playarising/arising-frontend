@@ -1,11 +1,13 @@
 'use client'
 
 import { Accordion, Stack, Text } from '@chakra-ui/react'
+import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
-import { ComputeBudgetProgram, Transaction } from '@solana/web3.js'
+import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { claimQuestIx, claimRecipeIx, findCharacterPda } from '@/lib/arising'
-import type { CodexQuest, CodexRecipe } from '@/lib/characters'
+import type { CodexQuest, CodexRecipe, CodexResourceMint } from '@/lib/characters'
 import { CurrentTaskCard } from './CurrentTaskCard'
 import { RewardBadges, ResourceBadges } from './TaskBadges'
 import { resolveProgress, sanitizeName, splitTitle } from './taskUtils'
@@ -35,6 +37,7 @@ type CurrentTasksProps = {
   recipeState: RecipeState | null
   codexQuests: CodexQuest[]
   codexRecipes: CodexRecipe[]
+  codexResourceMints: CodexResourceMint[]
   civilization: string
   civilizationCharacterId: number
 }
@@ -53,11 +56,13 @@ export function CurrentTasks({
   recipeState,
   codexQuests,
   codexRecipes,
+  codexResourceMints,
   civilization,
   civilizationCharacterId
 }: CurrentTasksProps) {
   const { connection } = useConnection()
   const { publicKey, signTransaction } = useWallet()
+  const router = useRouter()
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
   const [submitting, setSubmitting] = useState<'quest' | 'recipe' | null>(null)
 
@@ -80,9 +85,30 @@ export function CurrentTasks({
       const civIndex = CIV_INDEX[civilization] ?? 0
       const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
+      // Build remaining accounts for resource rewards
+      const questMeta = codexQuests.find((q) => Number(q.id) === questId)
+      const rewards = questMeta?.rewards ?? []
+      const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
+
+      if (Array.isArray(rewards)) {
+        for (const reward of rewards) {
+          if (reward && typeof reward === 'object' && 'resource' in reward && reward.resource) {
+            const resourceMint = codexResourceMints.find((rm) => rm.resource === reward.resource)
+            if (resourceMint?.mint) {
+              const mintPubkey = new PublicKey(resourceMint.mint)
+              const userAta = getAssociatedTokenAddressSync(mintPubkey, publicKey)
+              remainingAccounts.push(
+                { pubkey: mintPubkey, isWritable: true, isSigner: false },
+                { pubkey: userAta, isWritable: true, isSigner: false }
+              )
+            }
+          }
+        }
+      }
+
       const ix = claimQuestIx(
         { civilization: civIndex, characterId: civilizationCharacterId, questId },
-        { character: characterPda, authority: publicKey }
+        { character: characterPda, authority: publicKey, remainingAccounts }
       )
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
@@ -96,6 +122,7 @@ export function CurrentTasks({
       const signed = await signTransaction(tx)
       const sig = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
+      router.refresh()
 
     } catch (error) {
       console.error('Failed to claim quest:', error)
@@ -103,7 +130,7 @@ export function CurrentTasks({
     } finally {
       setSubmitting(null)
     }
-  }, [publicKey, signTransaction, questState, civilization, civilizationCharacterId, connection])
+  }, [publicKey, signTransaction, questState, civilization, civilizationCharacterId, connection, router, codexQuests, codexResourceMints])
 
   const handleClaimRecipe = useCallback(async () => {
     if (!publicKey || !signTransaction || !recipeState) return
@@ -114,9 +141,28 @@ export function CurrentTasks({
       const civIndex = CIV_INDEX[civilization] ?? 0
       const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
+      // Build remaining accounts for resource output
+      const recipeMeta = codexRecipes.find((r) => Number(r.id) === recipeId)
+      const output = recipeMeta?.output
+      const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
+
+      if (output && typeof output === 'object' && 'resource' in output && output.resource) {
+        const resourceMint = codexResourceMints.find(
+          (rm) => rm.resource === output.resource || rm.resourceId === output.resource_id
+        )
+        if (resourceMint?.mint) {
+          const mintPubkey = new PublicKey(resourceMint.mint)
+          const userAta = getAssociatedTokenAddressSync(mintPubkey, publicKey)
+          remainingAccounts.push(
+            { pubkey: mintPubkey, isWritable: true, isSigner: false },
+            { pubkey: userAta, isWritable: true, isSigner: false }
+          )
+        }
+      }
+
       const ix = claimRecipeIx(
         { civilization: civIndex, characterId: civilizationCharacterId, recipeId },
-        { character: characterPda, authority: publicKey }
+        { character: characterPda, authority: publicKey, remainingAccounts }
       )
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
@@ -130,6 +176,7 @@ export function CurrentTasks({
       const signed = await signTransaction(tx)
       const sig = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
+      router.refresh()
 
     } catch (error) {
       console.error('Failed to claim recipe:', error)
@@ -137,7 +184,7 @@ export function CurrentTasks({
     } finally {
       setSubmitting(null)
     }
-  }, [publicKey, signTransaction, recipeState, civilization, civilizationCharacterId, connection])
+  }, [publicKey, signTransaction, recipeState, civilization, civilizationCharacterId, connection, router, codexRecipes, codexResourceMints])
 
   return (
     <>

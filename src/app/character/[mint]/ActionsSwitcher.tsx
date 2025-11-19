@@ -1,11 +1,13 @@
 'use client'
 
 import { Badge, Box, Button, Flex, Progress, Stack, Text } from '@chakra-ui/react'
+import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
-import { ComputeBudgetProgram, Transaction } from '@solana/web3.js'
+import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
 import { type JSX, useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { claimQuestIx, claimRecipeIx, findCharacterPda, startQuestIx, startRecipeIx } from '@/lib/arising'
-import type { QuestReward, RecipeInput, RecipeOutput } from '@/lib/characters'
+import type { CodexResourceMint, QuestReward, RecipeInput, RecipeOutput } from '@/lib/characters'
 import { CurrentTaskCard } from './CurrentTaskCard'
 import { ResourceBadges, RewardBadges, StatRequirementBadges } from './TaskBadges'
 import { formatDuration, parseJson, resolveProgress, sanitizeName, splitTitle } from './taskUtils'
@@ -49,6 +51,7 @@ export type ActionsSwitcherProps = {
     input?: RecipeInput
     output?: RecipeOutput
   }[]
+  codexResourceMints: CodexResourceMint[]
   characterLevel: number
   characterEnergy: number
   characterStats: Record<string, number>
@@ -83,6 +86,7 @@ const CIV_INDEX: Record<string, number> = {
 export function ActionsSwitcher({
   quests,
   recipes,
+  codexResourceMints,
   characterLevel,
   characterEnergy,
   characterStats,
@@ -94,6 +98,7 @@ export function ActionsSwitcher({
 }: ActionsSwitcherProps) {
   const { connection } = useConnection()
   const { publicKey, signTransaction } = useWallet()
+  const router = useRouter()
   const [view, setView] = useState<(typeof VIEWS)[number]>('quests')
   const [submitting, setSubmitting] = useState<number | 'quest-claim' | 'recipe-claim' | null>(null)
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
@@ -229,6 +234,7 @@ export function ActionsSwitcher({
         const signed = await signTransaction(tx)
         const sig = await connection.sendRawTransaction(signed.serialize())
         await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
+        router.refresh()
 
       } catch (error) {
         console.error('Failed to start quest:', error)
@@ -237,7 +243,7 @@ export function ActionsSwitcher({
         setSubmitting(null)
       }
     },
-    [publicKey, signTransaction, civilization, civilizationCharacterId, connection]
+    [publicKey, signTransaction, civilization, civilizationCharacterId, connection, router]
   )
 
   const handleStartRecipe = useCallback(
@@ -249,9 +255,64 @@ export function ActionsSwitcher({
         const civIndex = CIV_INDEX[civilization] ?? 0
         const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
+        // Build remaining accounts for input materials
+        const recipeMeta = recipes.find((r) => r.id === recipeId)
+        const input = recipeMeta?.input
+        const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
+
+        if (input && typeof input === 'object') {
+          const inputObj = parseJson(input) as Record<string, unknown>
+
+          // Handle Craft recipes with materials array
+          if (inputObj.type === 'Craft' && Array.isArray(inputObj.materials)) {
+            const materials = inputObj.materials as Array<Record<string, unknown>>
+            for (const material of materials) {
+              const resourceName = String(material.resource ?? material.raw_material ?? '')
+              if (resourceName) {
+                const resourceMint = codexResourceMints.find((rm) => rm.resource === resourceName)
+                if (resourceMint?.mint) {
+                  const mintPubkey = new PublicKey(resourceMint.mint)
+                  const userAta = getAssociatedTokenAddressSync(mintPubkey, publicKey)
+                  remainingAccounts.push(
+                    { pubkey: mintPubkey, isWritable: true, isSigner: false },
+                    { pubkey: userAta, isWritable: true, isSigner: false }
+                  )
+                }
+              }
+            }
+
+            // Handle gold if required
+            if (inputObj.gold_amount) {
+              const goldMint = codexResourceMints.find((rm) => rm.resource === 'Gold' || rm.displayName === 'Gold')
+              if (goldMint?.mint) {
+                const mintPubkey = new PublicKey(goldMint.mint)
+                const userAta = getAssociatedTokenAddressSync(mintPubkey, publicKey)
+                remainingAccounts.push(
+                  { pubkey: mintPubkey, isWritable: true, isSigner: false },
+                  { pubkey: userAta, isWritable: true, isSigner: false }
+                )
+              }
+            }
+          }
+
+          // Handle Forge recipes with raw_material
+          if (inputObj.type === 'Forge' && inputObj.raw_material) {
+            const resourceName = String(inputObj.raw_material)
+            const resourceMint = codexResourceMints.find((rm) => rm.resource === resourceName)
+            if (resourceMint?.mint) {
+              const mintPubkey = new PublicKey(resourceMint.mint)
+              const userAta = getAssociatedTokenAddressSync(mintPubkey, publicKey)
+              remainingAccounts.push(
+                { pubkey: mintPubkey, isWritable: true, isSigner: false },
+                { pubkey: userAta, isWritable: true, isSigner: false }
+              )
+            }
+          }
+        }
+
         const ix = startRecipeIx(
           { civilization: civIndex, characterId: civilizationCharacterId, recipeId },
-          { character: characterPda, authority: publicKey }
+          { character: characterPda, authority: publicKey, remainingAccounts }
         )
 
         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
@@ -265,6 +326,7 @@ export function ActionsSwitcher({
         const signed = await signTransaction(tx)
         const sig = await connection.sendRawTransaction(signed.serialize())
         await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
+        router.refresh()
 
       } catch (error) {
         console.error('Failed to start recipe:', error)
@@ -273,7 +335,7 @@ export function ActionsSwitcher({
         setSubmitting(null)
       }
     },
-    [publicKey, signTransaction, civilization, civilizationCharacterId, connection]
+    [publicKey, signTransaction, civilization, civilizationCharacterId, connection, recipes, codexResourceMints, router]
   )
 
   const handleClaimQuest = useCallback(async () => {
@@ -285,9 +347,30 @@ export function ActionsSwitcher({
       const civIndex = CIV_INDEX[civilization] ?? 0
       const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
+      // Build remaining accounts for resource rewards
+      const questMeta = quests.find((q) => q.id === questId)
+      const rewards = questMeta?.rewards ?? []
+      const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
+
+      if (Array.isArray(rewards)) {
+        for (const reward of rewards) {
+          if (reward && typeof reward === 'object' && 'resource' in reward && reward.resource) {
+            const resourceMint = codexResourceMints.find((rm) => rm.resource === reward.resource)
+            if (resourceMint?.mint) {
+              const mintPubkey = new PublicKey(resourceMint.mint)
+              const userAta = getAssociatedTokenAddressSync(mintPubkey, publicKey)
+              remainingAccounts.push(
+                { pubkey: mintPubkey, isWritable: true, isSigner: false },
+                { pubkey: userAta, isWritable: true, isSigner: false }
+              )
+            }
+          }
+        }
+      }
+
       const ix = claimQuestIx(
         { civilization: civIndex, characterId: civilizationCharacterId, questId },
-        { character: characterPda, authority: publicKey }
+        { character: characterPda, authority: publicKey, remainingAccounts }
       )
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
@@ -301,6 +384,7 @@ export function ActionsSwitcher({
       const signed = await signTransaction(tx)
       const sig = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
+      router.refresh()
 
     } catch (error) {
       console.error('Failed to claim quest:', error)
@@ -308,7 +392,7 @@ export function ActionsSwitcher({
     } finally {
       setSubmitting(null)
     }
-  }, [publicKey, signTransaction, currentQuest, civilization, civilizationCharacterId, connection])
+  }, [publicKey, signTransaction, currentQuest, civilization, civilizationCharacterId, connection, router, quests, codexResourceMints])
 
   const handleClaimRecipe = useCallback(async () => {
     if (!publicKey || !signTransaction || !currentRecipe) return
@@ -319,9 +403,28 @@ export function ActionsSwitcher({
       const civIndex = CIV_INDEX[civilization] ?? 0
       const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
+      // Build remaining accounts for resource output
+      const recipeMeta = recipes.find((r) => r.id === recipeId)
+      const output = recipeMeta?.output
+      const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
+
+      if (output && typeof output === 'object' && 'resource' in output && output.resource) {
+        const resourceMint = codexResourceMints.find(
+          (rm) => rm.resource === output.resource || rm.resourceId === output.resource_id
+        )
+        if (resourceMint?.mint) {
+          const mintPubkey = new PublicKey(resourceMint.mint)
+          const userAta = getAssociatedTokenAddressSync(mintPubkey, publicKey)
+          remainingAccounts.push(
+            { pubkey: mintPubkey, isWritable: true, isSigner: false },
+            { pubkey: userAta, isWritable: true, isSigner: false }
+          )
+        }
+      }
+
       const ix = claimRecipeIx(
         { civilization: civIndex, characterId: civilizationCharacterId, recipeId },
-        { character: characterPda, authority: publicKey }
+        { character: characterPda, authority: publicKey, remainingAccounts }
       )
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
@@ -335,6 +438,7 @@ export function ActionsSwitcher({
       const signed = await signTransaction(tx)
       const sig = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
+      router.refresh()
 
     } catch (error) {
       console.error('Failed to claim recipe:', error)
@@ -342,7 +446,7 @@ export function ActionsSwitcher({
     } finally {
       setSubmitting(null)
     }
-  }, [publicKey, signTransaction, currentRecipe, civilization, civilizationCharacterId, connection])
+  }, [publicKey, signTransaction, currentRecipe, civilization, civilizationCharacterId, connection, router, recipes, codexResourceMints])
 
   const questProgress = resolveProgress(currentQuest, currentTime)
   const recipeProgress = resolveProgress(currentRecipe, currentTime)
