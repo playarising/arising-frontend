@@ -51,7 +51,7 @@ export type ActionsSwitcherProps = {
     type: string
     energyCost: number
     input?: RecipeInput
-    output?: RecipeOutput
+    output?: RecipeOutput | RecipeOutput[]
     durationSeconds?: number
   }[]
   codexResourceMints: CodexResourceMint[]
@@ -411,9 +411,11 @@ export function ActionsSwitcher({
       const output = recipeMeta?.output
       const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
 
-      if (output && typeof output === 'object' && 'resource' in output && output.resource) {
+      const outputs = Array.isArray(output) ? output : output ? [output] : []
+      for (const item of outputs) {
+        if (!item || typeof item !== 'object') continue
         const resourceMint = codexResourceMints.find(
-          (rm) => rm.resource === output.resource || rm.resourceId === output.resource_id
+          (rm) => rm.resource === item.resource || rm.resourceId === item.resource_id
         )
         if (resourceMint?.mint) {
           const mintPubkey = new PublicKey(resourceMint.mint)

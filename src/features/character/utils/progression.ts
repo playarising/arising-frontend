@@ -58,8 +58,10 @@ const diffSum = <T extends readonly string[]>(
   base: Record<T[number], number>
 ) =>
   keys.reduce((total, key) => {
-    const current = toNumber(values[key]) ?? base[key]
-    const baseline = base[key]
+    const typedKey = key as T[number]
+    const existing = values[typedKey]
+    const current = toNumber(existing) ?? base[typedKey]
+    const baseline = base[typedKey]
     return total + Math.max(0, current - baseline)
   }, 0)
 

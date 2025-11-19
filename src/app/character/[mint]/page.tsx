@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth'
 import {
   LEVEL_CURVE,
   authOptions,
+  calculateQuestEnergyCost,
+  calculateRecipeEnergyCost,
   fetchCharacterMetadata,
   fetchCharactersForAuthority,
   fetchCodex,
@@ -146,11 +148,17 @@ export default async function CharacterPage({ params }: { params: Params }) {
     .filter((item) => (item.levelRequired ?? 0) <= characterLevel)
     .sort((a, b) => a.levelRequired - b.levelRequired || a.id - b.id)
 
+  const characterCoreStats = {
+    might: Number.isFinite(parsedStatsNumbers.might) ? parsedStatsNumbers.might : 0,
+    speed: Number.isFinite(parsedStatsNumbers.speed) ? parsedStatsNumbers.speed : 0,
+    intellect: Number.isFinite(parsedStatsNumbers.intellect) ? parsedStatsNumbers.intellect : 0
+  }
+
   const questsForClient = availableQuests.map((q) => ({
     id: q.id,
     name: q.displayName,
     levelRequired: q.levelRequired,
-    energyCost: q.baseEnergyCost,
+    energyCost: calculateQuestEnergyCost(q, characterLevel, characterCoreStats),
     type: q.questType,
     rewards: q.rewards,
     requirements: q.minimumStats,
@@ -162,7 +170,7 @@ export default async function CharacterPage({ params }: { params: Params }) {
     name: r.displayName,
     levelRequired: r.levelRequired,
     type: r.recipeType,
-    energyCost: r.baseEnergyCost,
+    energyCost: calculateRecipeEnergyCost(r, characterLevel, characterCoreStats),
     input: r.input,
     output: r.output,
     durationSeconds: r.cooldownSeconds

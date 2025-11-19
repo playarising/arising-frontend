@@ -1,6 +1,6 @@
 "use client"
 
-import { Box, Button, Progress, Stack, Text } from '@chakra-ui/react'
+import { Box, Button, Flex, Progress, Stack, Text } from '@chakra-ui/react'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, Transaction } from '@solana/web3.js'
 import { useEffect, useState } from 'react'
@@ -85,49 +85,50 @@ export function EnergyStatus({
     <Box position="relative" width="full">
       <ModuleLoader loading={submitting} label="Refilling energy..." />
       <Stack gap={2} align="center" width="full">
-        <Stack
-          direction="row"
-          justify="space-between"
-          color="gray.300"
-          fontSize="sm"
-          width="full"
-          maxW={{ base: 'full', sm: '320px' }}
-        >
-          <Text>Energy</Text>
-          <Text>{energyPercent}%</Text>
+        <Stack width="full" maxW={{ base: 'full', sm: '320px' }} gap={1}>
+          <Flex width="full" justify="space-between" align="center">
+            <Text color="gray.400" fontSize="xs" fontWeight="600">
+              Energy
+            </Text>
+            <Text color="gray.100" fontSize="xs" fontWeight="700">
+              {energy.toLocaleString()} / {maxEnergy.toLocaleString()}
+            </Text>
+          </Flex>
+          <Progress.Root
+            shape="rounded"
+            value={Math.max(0, Math.min(energy, maxEnergy))}
+            max={maxEnergy}
+            size="lg"
+            width="full"
+            paddingX={4}
+            paddingY={2}
+          >
+            <Progress.Track background="custom-dark-primary">
+              <Progress.Range background="custom-keppel" />
+            </Progress.Track>
+          </Progress.Root>
+          <Text color="gray.500" fontSize="xs">
+            {energyPercent}% full
+          </Text>
         </Stack>
-      <Progress.Root
-        shape="rounded"
-        value={Math.max(0, Math.min(energy, maxEnergy))}
-        max={maxEnergy}
-        size="lg"
-        width="full"
-        maxW={{ base: 'full', sm: '320px' }}
-        paddingX={4}
-        paddingY={2}
-      >
-        <Progress.Track background="custom-dark-primary">
-          <Progress.Range background="custom-keppel" />
-        </Progress.Track>
-      </Progress.Root>
-      <Button
-        size="sm"
-        background="custom-blue"
-        color="black"
-        fontWeight="700"
-        _hover={{ bg: 'white', color: 'black' }}
-        cursor={refillAvailable && !submitting ? 'pointer' : 'not-allowed'}
-        disabled={!refillAvailable || submitting || !publicKey || !signTransaction}
-        width={{ base: 'full', sm: 'auto' }}
-        onClick={handleRefill}
-      >
-        {submitting ? 'Refilling...' : refillAvailable ? 'Refill Energy' : 'Refill available in'}
-      </Button>
-      {!refillAvailable && (
-        <Text color="gray.400" fontSize="xs">
-          {formatDuration(countdownSeconds)}
-        </Text>
-      )}
+        <Button
+          size="sm"
+          background="custom-blue"
+          color="black"
+          fontWeight="700"
+          _hover={{ bg: 'white', color: 'black' }}
+          cursor={refillAvailable && !submitting ? 'pointer' : 'not-allowed'}
+          disabled={!refillAvailable || submitting || !publicKey || !signTransaction}
+          width={{ base: 'full', sm: 'auto' }}
+          onClick={handleRefill}
+        >
+          {submitting ? 'Refilling...' : refillAvailable ? 'Refill Energy' : 'Refill available in'}
+        </Button>
+        {!refillAvailable && (
+          <Text color="gray.400" fontSize="xs">
+            {formatDuration(countdownSeconds)}
+          </Text>
+        )}
       </Stack>
     </Box>
   )

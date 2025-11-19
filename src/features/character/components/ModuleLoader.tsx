@@ -18,7 +18,7 @@ export function ModuleLoader({ loading, label }: ModuleLoaderProps) {
       flexDirection="column"
       gap={3}
     >
-      <Spinner color="custom-blue" size="lg" thickness="3px" speed="0.65s" />
+      <Spinner color="custom-blue" size="lg" />
       {label ? (
         <span style={{ color: 'white', fontWeight: 600, fontSize: '0.9rem' }}>{label}</span>
       ) : null}

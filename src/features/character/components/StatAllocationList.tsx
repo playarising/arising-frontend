@@ -113,16 +113,16 @@ export function StatAllocationList({
       setSubmitting(true)
       const civIndex = resolveCivilizationIndex(civilization)
       const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
-      const allocation =
-        type === 'core' ? buildCoreAllocation() : buildAttributeAllocation()
+      const allocationCore = buildCoreAllocation()
+      const allocationAttr = buildAttributeAllocation()
       const ix =
         type === 'core'
           ? allocateCoreStatsIx(
-              { civilization: civIndex, characterId: civilizationCharacterId, allocation },
+              { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationCore },
               { character: characterPda, authority: publicKey }
             )
           : allocateAttributesIx(
-              { civilization: civIndex, characterId: civilizationCharacterId, allocation },
+              { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationAttr },
               { character: characterPda, authority: publicKey }
             )
 

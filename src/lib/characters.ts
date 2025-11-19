@@ -59,6 +59,12 @@ export type QuestReward = {
   type?: string
 }
 
+export type QuestEnergyCostCalculation = {
+  at_requirements?: number
+  max_energy_cost?: number
+  min_energy_cost?: number
+}
+
 export type CodexQuest = {
   id: number
   questType: string
@@ -69,6 +75,7 @@ export type CodexQuest = {
   baseEnergyCost: number
   minimumStats?: Record<string, number>
   rewards?: QuestReward[]
+  energyCostCalculation?: QuestEnergyCostCalculation
   raw: Record<string, string | number | boolean | object>
 }
 
@@ -106,7 +113,7 @@ export type CodexRecipe = {
   baseEnergyCost: number
   minimumStats?: Record<string, number>
   input?: RecipeInput
-  output?: RecipeOutput
+  output?: RecipeOutput | RecipeOutput[]
   raw: Record<string, string | number | boolean | object>
 }
 
@@ -331,6 +338,7 @@ const CODEX_QUERY = `
         baseEnergyCost
         cooldownSeconds
         displayName
+        energyCostCalculation
         id
         levelRequired
         minimumStats
@@ -464,13 +472,15 @@ export async function fetchCodex(): Promise<{
     quests: (json?.data?.allCodexQuests?.nodes ?? []).map((node: CodexQuest) => ({
       ...node,
       minimumStats: parseJson<Record<string, number>>(node.minimumStats),
-      rewards: parseJson<unknown>(node.rewards) ?? node.rewards
+      rewards: parseJson<QuestReward[]>(node.rewards) ?? (Array.isArray(node.rewards) ? node.rewards : []),
+      energyCostCalculation:
+        parseJson<QuestEnergyCostCalculation>(node.energyCostCalculation) ?? node.energyCostCalculation
     })),
     recipes: (json?.data?.allCodexRecipes?.nodes ?? []).map((node: CodexRecipe) => ({
       ...node,
       minimumStats: parseJson<Record<string, number>>(node.minimumStats),
-      input: parseJson<unknown>(node.input) ?? node.input,
-      output: parseJson<unknown>(node.output) ?? node.output
+      input: parseJson<RecipeInput>(node.input) ?? node.input,
+      output: parseJson<RecipeOutput | RecipeOutput[]>(node.output) ?? node.output
     })),
     resourceMints: (json?.data?.allCodexResourceMints?.nodes ?? []) as CodexResourceMint[]
   }
