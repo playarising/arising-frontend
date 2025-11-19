@@ -2,7 +2,8 @@
 
 import { Box, Button, Flex, Progress, Stack, Text } from '@chakra-ui/react'
 import type { JSX } from 'react'
-import { formatDuration, type ProgressState } from './taskUtils'
+import { ModuleLoader } from './ModuleLoader'
+import { formatDuration, type ProgressState } from '../utils/taskUtils'
 
 type CurrentTaskCardProps = {
   titleLines: string[]
@@ -23,7 +24,8 @@ export const CurrentTaskCard = ({
   claimLabel,
   submitting
 }: CurrentTaskCardProps) => (
-  <Box border="1px solid rgba(255,255,255,0.1)" borderRadius="md" padding={4} bg="rgba(255,255,255,0.02)">
+  <Box border="1px solid rgba(255,255,255,0.1)" borderRadius="md" padding={4} bg="rgba(255,255,255,0.02)" position="relative">
+    <ModuleLoader loading={Boolean(submitting)} label="Processing..." />
     <Stack gap={3}>
       <Stack gap={0.5}>
         {titleLines.length

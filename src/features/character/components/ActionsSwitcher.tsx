@@ -9,8 +9,9 @@ import { useRouter } from 'next/navigation'
 import { claimQuestIx, claimRecipeIx, findCharacterPda, startQuestIx, startRecipeIx } from '@/lib/arising'
 import type { CodexResourceMint, QuestReward, RecipeInput, RecipeOutput } from '@/lib/characters'
 import { CurrentTaskCard } from './CurrentTaskCard'
+import { ModuleLoader } from './ModuleLoader'
 import { ResourceBadges, RewardBadges, StatRequirementBadges } from './TaskBadges'
-import { formatDuration, parseJson, resolveProgress, sanitizeName, splitTitle } from './taskUtils'
+import { formatDuration, parseJson, resolveProgress, sanitizeName, splitTitle } from '../utils/taskUtils'
 
 type QuestState = {
   quest_id?: number
@@ -71,9 +72,9 @@ export type ActionsSwitcherProps = {
 
 const VIEWS = ['quests', 'craft', 'forge'] as const
 const QUEST_TYPE_COPY: Record<string, string> = {
-  Job: 'Short tasks that pay out steady resources.',
-  Farm: 'Resource-focused runs to gather materials.',
-  Raid: 'Harder encounters with higher risk and reward.'
+  Job: 'Reliable contracts that bring home gold, ensuring you can pay forge fees, buy recipes, and keep gear in shape.',
+  Farm: 'Material-focused outings that scoop up the hides, ores, and reagents needed for forge projects and weapon crafts.',
+  Raid: 'High-intensity excursions designed primarily for experience gain, pushing your character toward the next tier.'
 }
 
 const CIV_INDEX: Record<string, number> = {
@@ -129,14 +130,14 @@ export function ActionsSwitcher({
       issues.push(`Need ${quest.energyCost - characterEnergy} more Energy`)
     }
 
-    // Check stats
+    // Check minimum stats
     if (quest.requirements) {
       const parsed = parseJson(quest.requirements)
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         for (const [stat, required] of Object.entries(parsed)) {
           const current = characterStats[stat] || 0
           const requiredNum = Number(required)
-          if (current < requiredNum) {
+          if (Number.isFinite(requiredNum) && current < requiredNum) {
             const statName = stat.charAt(0).toUpperCase() + stat.slice(1)
             issues.push(`Need ${requiredNum - current} more ${statName}`)
           }
@@ -521,7 +522,7 @@ export function ActionsSwitcher({
 
           <Box>
             <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-              REQUIRED STATS
+              MINIMUM STATS
             </Text>
             <StatRequirementBadges value={quest.requirements} />
           </Box>
@@ -839,7 +840,9 @@ export function ActionsSwitcher({
   const hasContent = content !== null && (Array.isArray(content) ? content.length > 0 : true)
 
   return (
-    <Stack gap={4} width="full">
+    <Box position="relative">
+      <ModuleLoader loading={Boolean(submitting)} label="Submitting transaction..." />
+      <Stack gap={4} width="full">
       <Grid
         templateColumns="auto minmax(0, 1fr) auto"
         alignItems="center"
@@ -878,9 +881,10 @@ export function ActionsSwitcher({
         </Box>
       </Grid>
 
-      <Stack gap={3} color="gray.500" fontSize="sm" width="full">
-        {hasContent ? content : <Text>None</Text>}
+        <Stack gap={3} color="gray.500" fontSize="sm" width="full">
+          {hasContent ? content : <Text>None</Text>}
+        </Stack>
       </Stack>
-    </Stack>
+    </Box>
   )
 }

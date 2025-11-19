@@ -522,7 +522,7 @@ export function PlayContent() {
                       ? levelFromMetadataNumber
                       : undefined
                 const resolvedLevel = resolvedLevelNumber ?? levelFromMetadata ?? '—'
-                const maxEnergy = resolvedLevelNumber ? 10 + (resolvedLevelNumber - 1) : undefined
+                const maxEnergy = resolvedLevelNumber ? 10 + Math.max(0, resolvedLevelNumber - 1) : undefined
                 const currentEnergy = typeof selected.energy === 'number' ? selected.energy : undefined
                 const energyPercent =
                   currentEnergy !== undefined && maxEnergy
@@ -637,7 +637,7 @@ export function PlayContent() {
                             {currentEnergy !== undefined && maxEnergy ? (
                               <Progress.Root
                                 shape="rounded"
-                                value={currentEnergy}
+                                value={Math.max(0, Math.min(currentEnergy, maxEnergy))}
                                 max={maxEnergy}
                                 size="lg"
                                 width={{ base: '90%', md: '60%' }}

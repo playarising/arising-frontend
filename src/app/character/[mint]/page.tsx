@@ -12,9 +12,11 @@ import {
   fetchCodex,
   levelFromExperience
 } from '@/lib'
-import { ActionsSwitcher } from './ActionsSwitcher'
-import { CurrentTasks } from './CurrentTasks'
-import { EnergyStatus } from './EnergyStatus'
+import { ActionsSwitcher, CurrentTasks, EnergyStatus, StatAllocationList } from '@/features/character/components'
+import {
+  calculateAttributePointAvailability,
+  calculateCorePointAvailability
+} from '@/features/character/utils/progression'
 
 type Params = Promise<{ mint: string }>
 
@@ -73,7 +75,7 @@ export default async function CharacterPage({ params }: { params: Params }) {
       : 100
     : 0
   const xpRemaining = xpNeededThisLevel > 0 ? Math.max(0, xpNeededThisLevel - clampedXpProgress) : 0
-  const maxEnergy = 10 + (characterLevel - 1)
+  const maxEnergy = 10 + Math.max(0, characterLevel - 1)
   const REFILL_COOLDOWN_SECONDS = 24 * 60 * 60
   const nextRefillSeconds = parsedLastRefill + REFILL_COOLDOWN_SECONDS
   let parsedStatsObj: Record<string, unknown> = {}
@@ -86,12 +88,21 @@ export default async function CharacterPage({ params }: { params: Params }) {
   } else if (typeof character.stats === 'object' && character.stats) {
     parsedStatsObj = character.stats
   }
-  const parsedStatsEntries = Object.entries(parsedStatsObj).filter(([, value]) => typeof value === 'number') as Array<
-    [string, number]
-  >
-  const totalCorePoints = Math.max(0, characterLevel - 1)
-  const spentCorePoints = parsedStatsEntries.reduce((acc, [, value]) => acc + value, 0)
-  const availableCorePoints = Math.max(0, totalCorePoints - spentCorePoints)
+  const toNumericEntries = (input: Record<string, unknown>) =>
+    Object.entries(input).reduce<Array<[string, number]>>((acc, [key, value]) => {
+      const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN
+      if (Number.isFinite(parsed)) acc.push([key, parsed])
+      return acc
+    }, [])
+
+  const parsedStatsEntries = toNumericEntries(parsedStatsObj)
+  const parsedStatsNumbers = Object.fromEntries(parsedStatsEntries) as Record<string, number>
+  const corePointAvailability = calculateCorePointAvailability(
+    characterLevel,
+    character.civilization,
+    parsedStatsNumbers
+  )
+  const availableCorePoints = corePointAvailability.available
 
   let parsedAttributesObj: Record<string, unknown> = {}
   if (typeof character.attributes === 'string') {
@@ -104,17 +115,14 @@ export default async function CharacterPage({ params }: { params: Params }) {
     parsedAttributesObj = character.attributes
   }
 
-  const parsedAttributesEntries = Object.entries(parsedAttributesObj).filter(
-    ([, value]) => typeof value === 'number'
-  ) as Array<[string, number]>
-  const totalAttributePoints = Math.max(0, Math.floor((characterLevel - 1) / 5))
-  const availableAttributePoints = totalAttributePoints
-  const formatLabel = (key: string) =>
-    key
-      .split('_')
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(' ')
-
+  const parsedAttributesEntries = toNumericEntries(parsedAttributesObj)
+  const parsedAttributesNumbers = Object.fromEntries(parsedAttributesEntries) as Record<string, number>
+  const attributePointAvailability = calculateAttributePointAvailability(
+    characterLevel,
+    character.civilization,
+    parsedAttributesNumbers
+  )
+  const availableAttributePoints = attributePointAvailability.available
   const parseState = (value: string | object | null | undefined) => {
     if (!value) return null
     if (typeof value === 'string') {
@@ -224,61 +232,13 @@ export default async function CharacterPage({ params }: { params: Params }) {
         </Accordion.ItemTrigger>
         <Accordion.ItemContent>
           <Accordion.ItemBody paddingX={3} paddingY={3}>
-            <Stack gap={2} color="gray.300" fontSize="sm">
-              {parsedStatsEntries.length === 0 ? (
-                <Text color="gray.500">No stats available.</Text>
-              ) : (
-                parsedStatsEntries.map(([key, value]) => (
-                  <Stack
-                    key={key}
-                    direction="row"
-                    justify="space-between"
-                    align="center"
-                    border="1px solid rgba(255,255,255,0.08)"
-                    borderRadius="md"
-                    padding={3}
-                    bg="rgba(255,255,255,0.02)"
-                  >
-                    <Text color="white" fontWeight="700">
-                      {formatLabel(key)}
-                    </Text>
-                    <Stack direction="row" align="center" gap={2}>
-                      <Text color="gray.200">{value}</Text>
-                      {availableCorePoints > 0 && (
-                        <Box
-                          as="button"
-                          aria-label={`Increase ${key}`}
-                          border="1px solid rgba(255,255,255,0.35)"
-                          borderRadius="full"
-                          width="26px"
-                          height="26px"
-                          display="grid"
-                          placeItems="center"
-                          color="white"
-                          background="rgba(255,255,255,0.08)"
-                          _hover={{ bg: 'white', color: 'black' }}
-                          cursor="pointer"
-                        >
-                          +
-                        </Box>
-                      )}
-                    </Stack>
-                  </Stack>
-                ))
-              )}
-            </Stack>
-            <Button
-              mt={3}
-              size="sm"
-              background="custom-blue"
-              color="black"
-              fontWeight="700"
-              _hover={{ bg: 'white', color: 'black' }}
-              disabled={availableCorePoints <= 0}
-              width="full"
-            >
-              Spend points ({availableCorePoints})
-            </Button>
+            <StatAllocationList
+              type="core"
+              civilization={character.civilization}
+              civilizationCharacterId={character.civilizationCharacterId}
+              level={characterLevel}
+              stats={parsedStatsNumbers}
+            />
           </Accordion.ItemBody>
         </Accordion.ItemContent>
       </Accordion.Item>
@@ -302,61 +262,13 @@ export default async function CharacterPage({ params }: { params: Params }) {
           </Accordion.ItemTrigger>
           <Accordion.ItemContent>
             <Accordion.ItemBody paddingX={3} paddingY={3}>
-              <Stack gap={2} color="gray.300" fontSize="sm">
-                {parsedAttributesEntries.length === 0 ? (
-                  <Text color="gray.500">No attributes available.</Text>
-                ) : (
-                  parsedAttributesEntries.map(([key, value]) => (
-                    <Stack
-                      key={key}
-                      direction="row"
-                      justify="space-between"
-                      align="center"
-                      border="1px solid rgba(255,255,255,0.08)"
-                      borderRadius="md"
-                      padding={3}
-                      bg="rgba(255,255,255,0.02)"
-                    >
-                      <Text color="white" fontWeight="700">
-                        {formatLabel(key)}
-                      </Text>
-                      <Stack direction="row" align="center" gap={2}>
-                        <Text color="gray.200">{value}</Text>
-                        {availableAttributePoints > 0 && (
-                          <Box
-                            as="button"
-                            aria-label={`Increase ${key}`}
-                            border="1px solid rgba(255,255,255,0.35)"
-                            borderRadius="full"
-                            width="26px"
-                            height="26px"
-                            display="grid"
-                            placeItems="center"
-                            color="white"
-                            background="rgba(255,255,255,0.08)"
-                            _hover={{ bg: 'white', color: 'black' }}
-                            cursor="pointer"
-                          >
-                            +
-                          </Box>
-                        )}
-                      </Stack>
-                    </Stack>
-                  ))
-                )}
-              </Stack>
-              <Button
-                mt={3}
-                size="sm"
-                background="custom-blue"
-                color="black"
-                fontWeight="700"
-                _hover={{ bg: 'white', color: 'black' }}
-                disabled={availableAttributePoints <= 0}
-                width="full"
-              >
-                Spend points ({availableAttributePoints})
-              </Button>
+              <StatAllocationList
+                type="attribute"
+                civilization={character.civilization}
+                civilizationCharacterId={character.civilizationCharacterId}
+                level={characterLevel}
+                stats={parsedAttributesNumbers}
+              />
             </Accordion.ItemBody>
           </Accordion.ItemContent>
         </Accordion.Item>
@@ -537,7 +449,13 @@ export default async function CharacterPage({ params }: { params: Params }) {
                   : 'Level progression unavailable'}
               </Text>
             </Stack>
-            <EnergyStatus energy={parsedEnergy} maxEnergy={maxEnergy} nextRefillEpochSeconds={nextRefillSeconds} />
+            <EnergyStatus
+              energy={parsedEnergy}
+              maxEnergy={maxEnergy}
+              nextRefillEpochSeconds={nextRefillSeconds}
+              civilization={character.civilization}
+              civilizationCharacterId={character.civilizationCharacterId}
+            />
             {renderStatsAccordions('overview', {
               includeAttributes: true,
               includeTasks: true,

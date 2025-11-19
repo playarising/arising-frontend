@@ -10,7 +10,7 @@ import { claimQuestIx, claimRecipeIx, findCharacterPda } from '@/lib/arising'
 import type { CodexQuest, CodexRecipe, CodexResourceMint } from '@/lib/characters'
 import { CurrentTaskCard } from './CurrentTaskCard'
 import { RewardBadges, ResourceBadges } from './TaskBadges'
-import { resolveProgress, sanitizeName, splitTitle } from './taskUtils'
+import { resolveProgress, sanitizeName, splitTitle } from '../utils/taskUtils'
 
 type QuestState = {
   quest_id?: number

@@ -2,7 +2,7 @@
 
 import { Badge, Flex } from '@chakra-ui/react'
 import type { RecipeInput, RecipeOutput, QuestReward } from '@/lib/characters'
-import { parseJson, sanitizeName } from './taskUtils'
+import { parseJson, sanitizeName } from '../utils/taskUtils'
 
 export const StatRequirementBadges = ({ value }: { value: Record<string, number> | undefined }) => {
   const parsed = parseJson(value)
@@ -44,6 +44,12 @@ export const RewardBadges = ({ value }: { value: QuestReward[] | unknown }) => {
           if (item && typeof item === 'object') {
             const obj = item as Record<string, unknown>
             const amount = String(obj.amount ?? '')
+            if (typeof obj.resource === 'string') {
+              obj.resource = sanitizeName(obj.resource)
+            }
+            if (typeof obj.type === 'string') {
+              obj.type = sanitizeName(obj.type)
+            }
             const resource = String(obj.resource ?? obj.type ?? 'Reward')
             return (
               <Badge key={idx} colorScheme="green" fontSize="xs" px={2} py={0.5}>
@@ -53,7 +59,7 @@ export const RewardBadges = ({ value }: { value: QuestReward[] | unknown }) => {
           }
           return (
             <Badge key={idx} colorScheme="green" fontSize="xs" px={2} py={0.5}>
-              {String(item)}
+              {sanitizeName(String(item))}
             </Badge>
           )
         })}
