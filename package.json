@@ -6,8 +6,8 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "format": "biome format --write ./src",
-    "lint": "biome lint --write --unsafe ./src",
+    "format": "biome format --write .",
+    "lint": "biome lint --write --unsafe .",
     "start": "next start"
   },
   "dependencies": {

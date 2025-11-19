@@ -1,5 +1,12 @@
 const INDEXER_ENDPOINT = 'https://indexer.playarising.com/graphql'
 
+export type QuestOrRecipeStatus = {
+  id: number
+  started_at?: string | number
+  ends_at?: string | number
+  [key: string]: string | number | undefined
+}
+
 export type CharacterRecord = {
   pubkey: string
   authority?: string
@@ -11,8 +18,8 @@ export type CharacterRecord = {
   lastEnergyRefill?: number | string | null
   stats?: Record<string, number> | string | null
   attributes?: Record<string, number> | string | null
-  currentQuest?: unknown
-  currentRecipe?: unknown
+  currentQuest?: QuestOrRecipeStatus | null
+  currentRecipe?: QuestOrRecipeStatus | null
 }
 
 export type CharacterWithMetadata = CharacterRecord & {
@@ -30,16 +37,26 @@ export type LevelCurveEntry = {
   cumulativeXp: number
 }
 
+export type CodexEquipmentSlot = string | string[]
+
+export type AttributeBonus = Record<string, number>
+
 export type CodexEquipment = {
   idx: number
   displayName: string
   category: string
-  allowedSlots: unknown
+  allowedSlots: CodexEquipmentSlot
   occupiesBothHands: boolean
   occupiesForearm: boolean
   levelRequired: number
-  attributeBonus: unknown
-  raw: unknown
+  attributeBonus: AttributeBonus
+  raw: Record<string, string | number | boolean | object>
+}
+
+export type QuestReward = {
+  amount: number
+  resource?: string
+  type?: string
 }
 
 export type CodexQuest = {
@@ -51,8 +68,32 @@ export type CodexQuest = {
   cooldownSeconds: number
   baseEnergyCost: number
   minimumStats?: Record<string, number>
-  rewards?: unknown
-  raw: unknown
+  rewards?: QuestReward[]
+  raw: Record<string, string | number | boolean | object>
+}
+
+export type RecipeMaterial = {
+  amount: number
+  resource?: string
+  raw_material?: string
+  resource_id?: number
+  raw_material_id?: number
+}
+
+export type RecipeInput = {
+  type: string
+  amount?: number
+  raw_material?: string
+  raw_material_id?: number
+  materials?: RecipeMaterial[]
+  gold_amount?: number
+}
+
+export type RecipeOutput = {
+  type: string
+  amount: number
+  resource: string
+  resource_id: number
 }
 
 export type CodexRecipe = {
@@ -64,9 +105,9 @@ export type CodexRecipe = {
   cooldownSeconds: number
   baseEnergyCost: number
   minimumStats?: Record<string, number>
-  input?: unknown
-  output?: unknown
-  raw: unknown
+  input?: RecipeInput
+  output?: RecipeOutput
+  raw: Record<string, string | number | boolean | object>
 }
 
 export type CodexResourceMint = {
@@ -74,7 +115,7 @@ export type CodexResourceMint = {
   resource: string
   displayName: string
   mint: string
-  raw: unknown
+  raw: Record<string, string | number | boolean | object>
 }
 
 export const LEVEL_CAP = 150
@@ -385,7 +426,7 @@ export async function fetchCharacterByMint(mint: string): Promise<CharacterRecor
   return node ?? null
 }
 
-const parseJson = <T>(value: unknown): T | undefined => {
+const parseJson = <T>(value: string | object | null | undefined): T | undefined => {
   if (typeof value === 'string') {
     try {
       return JSON.parse(value) as T

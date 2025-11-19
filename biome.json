@@ -1,7 +1,8 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
   "files": {
-    "maxSize": 10485760
+    "maxSize": 10485760,
+    "includes": ["src"]
   },
   "assist": {
     "actions": {
@@ -37,7 +38,11 @@
         },
         "noEmptyBlockStatements": "error",
         "useAwait": "error",
-        "noDuplicateJsxProps": "error"
+        "noDuplicateJsxProps": "error",
+        "noExplicitAny": "error"
+      },
+      "complexity": {
+        "noBannedTypes": "error"
       },
       "a11y": {
         "useSemanticElements": "error"

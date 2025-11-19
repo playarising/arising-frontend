@@ -1,4 +1,4 @@
-import { Accordion, Box, Button, Grid, GridItem, Progress, Stack, Text } from '@chakra-ui/react'
+import { Accordion, Badge, Box, Button, Flex, Grid, GridItem, Progress, Stack, Text } from '@chakra-ui/react'
 import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { Connection, clusterApiUrl, PublicKey } from '@solana/web3.js'
 import Image from 'next/image'
@@ -92,6 +92,12 @@ export default async function CharacterPage({ params }: { params: Params }) {
       .split('_')
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ')
+  const sanitizeName = (name: string) => {
+    return name
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim()
+  }
   const formatDuration = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600)
     const mins = Math.floor((seconds % 3600) / 60)
@@ -103,16 +109,16 @@ export default async function CharacterPage({ params }: { params: Params }) {
     return parts.join(' ')
   }
 
-  const parseState = (value: unknown) => {
+  const parseState = (value: string | object | null | undefined) => {
     if (!value) return null
     if (typeof value === 'string') {
       try {
-        return JSON.parse(value) as Record<string, unknown>
+        return JSON.parse(value) as Record<string, string | number>
       } catch {
         return null
       }
     }
-    if (typeof value === 'object') return value as Record<string, unknown>
+    if (typeof value === 'object') return value as Record<string, string | number>
     return null
   }
 
@@ -177,10 +183,10 @@ export default async function CharacterPage({ params }: { params: Params }) {
     try {
       const decoded = AccountLayout.decode(acc.account.data)
       const mintB58 = new PublicKey(decoded.mint).toBase58()
-      if (!resourceMintMap.has(mintB58)) continue
+      const meta = resourceMintMap.get(mintB58)
+      if (!meta) continue
       const asNumber = Number(BigInt(decoded.amount.toString()))
       if (asNumber <= 0) continue
-      const meta = resourceMintMap.get(mintB58)!
       inventoryBalances.push({
         resource: meta.resource,
         displayName: meta.displayName,
@@ -386,23 +392,51 @@ export default async function CharacterPage({ params }: { params: Params }) {
             <Accordion.ItemContent>
               <Accordion.ItemBody paddingX={3} paddingY={3}>
                 {resolvedQuestState ? (
-                  <Stack gap={2}>
-                    <Text color="white" fontWeight="700">
+                  <Stack gap={3}>
+                    <Text color="white" fontWeight="800" fontSize="md">
                       {(() => {
                         const questId = Number(resolvedQuestState.quest_id ?? resolvedQuestState.questId ?? NaN)
                         const questMeta = codex.quests.find((q) => Number(q.id) === questId)
                         return questMeta?.displayName ?? (Number.isFinite(questId) ? `Quest #${questId}` : 'Quest')
                       })()}
                     </Text>
-                    <Text color="gray.300" fontSize="sm">
-                      Rewards: {(() => {
+                    <Box>
+                      <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
+                        REWARDS
+                      </Text>
+                      {(() => {
                         const questId = Number(resolvedQuestState.quest_id ?? resolvedQuestState.questId ?? NaN)
                         const questMeta = codex.quests.find((q) => Number(q.id) === questId)
-                        if (questMeta?.rewards) return JSON.stringify(questMeta.rewards)
-                        if (resolvedQuestState.rewards) return JSON.stringify(resolvedQuestState.rewards)
-                        return '—'
+                        const rewards = questMeta?.rewards ?? resolvedQuestState.rewards
+                        if (Array.isArray(rewards) && rewards.length > 0) {
+                          return (
+                            <Flex gap={1.5} flexWrap="wrap">
+                              {rewards.map((reward, idx) => {
+                                if (reward && typeof reward === 'object') {
+                                  const amount = String((reward as Record<string, unknown>).amount ?? '')
+                                  const resource = String(
+                                    (reward as Record<string, unknown>).resource ??
+                                      (reward as Record<string, unknown>).type ??
+                                      'Reward'
+                                  )
+                                  return (
+                                    <Badge key={idx} colorScheme="green" fontSize="xs" px={2} py={0.5}>
+                                      {amount} {resource}
+                                    </Badge>
+                                  )
+                                }
+                                return null
+                              })}
+                            </Flex>
+                          )
+                        }
+                        return (
+                          <Badge colorScheme="gray" fontSize="xs">
+                            None
+                          </Badge>
+                        )
                       })()}
-                    </Text>
+                    </Box>
                     {questProgress && (
                       <>
                         <Progress.Root
@@ -466,23 +500,41 @@ export default async function CharacterPage({ params }: { params: Params }) {
             <Accordion.ItemContent>
               <Accordion.ItemBody paddingX={3} paddingY={3}>
                 {resolvedRecipeState ? (
-                  <Stack gap={2}>
-                    <Text color="white" fontWeight="700">
+                  <Stack gap={3}>
+                    <Text color="white" fontWeight="800" fontSize="md">
                       {(() => {
                         const recipeId = Number(resolvedRecipeState.recipe_id ?? resolvedRecipeState.recipeId ?? NaN)
                         const recipeMeta = codex.recipes.find((r) => Number(r.id) === recipeId)
-                        return recipeMeta?.displayName ?? (Number.isFinite(recipeId) ? `Recipe #${recipeId}` : 'Recipe')
+                        const displayName = recipeMeta?.displayName ?? (Number.isFinite(recipeId) ? `Recipe #${recipeId}` : 'Recipe')
+                        return sanitizeName(displayName)
                       })()}
                     </Text>
-                    <Text color="gray.300" fontSize="sm">
-                      Rewards: {(() => {
+                    <Box>
+                      <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
+                        PRODUCES
+                      </Text>
+                      {(() => {
                         const recipeId = Number(resolvedRecipeState.recipe_id ?? resolvedRecipeState.recipeId ?? NaN)
                         const recipeMeta = codex.recipes.find((r) => Number(r.id) === recipeId)
-                        if (recipeMeta?.output) return JSON.stringify(recipeMeta.output)
-                        if (resolvedRecipeState.output) return JSON.stringify(resolvedRecipeState.output)
-                        return '—'
+                        const output = recipeMeta?.output ?? resolvedRecipeState.output
+                        if (output && typeof output === 'object' && !Array.isArray(output)) {
+                          const obj = output as Record<string, unknown>
+                          const amount = String(obj.amount ?? '')
+                          const rawRes = obj.resource ?? obj.type ?? 'Item'
+                          const resource = sanitizeName(String(rawRes))
+                          return (
+                            <Badge colorScheme="green" fontSize="xs" px={2} py={0.5}>
+                              {amount} {resource}
+                            </Badge>
+                          )
+                        }
+                        return (
+                          <Badge colorScheme="gray" fontSize="xs">
+                            None
+                          </Badge>
+                        )
                       })()}
-                    </Text>
+                    </Box>
                     {recipeProgress && (
                       <>
                         <Progress.Root
@@ -662,7 +714,16 @@ export default async function CharacterPage({ params }: { params: Params }) {
             width="full"
             gap={4}
           >
-            <ActionsSwitcher quests={questsForClient} recipes={recipesForClient} />
+            <ActionsSwitcher
+              quests={questsForClient}
+              recipes={recipesForClient}
+              characterLevel={characterLevel}
+              characterEnergy={parsedEnergy}
+              characterStats={Object.fromEntries(parsedStatsEntries)}
+              inventory={inventoryBalances}
+              civilization={character.civilization}
+              civilizationCharacterId={character.civilizationCharacterId}
+            />
           </Stack>
         </GridItem>
       </Grid>
