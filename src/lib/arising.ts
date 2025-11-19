@@ -1,6 +1,6 @@
 import { PublicKey, SYSVAR_RENT_PUBKEY, SystemProgram, TransactionInstruction } from '@solana/web3.js'
 
-export const ARISING_PROGRAM_ID = new PublicKey('arisf5D474u42BL55eCbDFgc5qA3LHGhgVdhCYQkgrM')
+export const ARISING_PROGRAM_ID = new PublicKey('arisFmS4ovGjBoxAwfuPX3iJaAvW2KtBAver3uknfMp')
 
 export const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
 export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
