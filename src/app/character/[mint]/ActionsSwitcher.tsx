@@ -6,6 +6,9 @@ import { ComputeBudgetProgram, Transaction } from '@solana/web3.js'
 import { type JSX, useCallback, useEffect, useState } from 'react'
 import { claimQuestIx, claimRecipeIx, findCharacterPda, startQuestIx, startRecipeIx } from '@/lib/arising'
 import type { QuestReward, RecipeInput, RecipeOutput } from '@/lib/characters'
+import { CurrentTaskCard } from './CurrentTaskCard'
+import { ResourceBadges, RewardBadges, StatRequirementBadges } from './TaskBadges'
+import { formatDuration, parseJson, resolveProgress, sanitizeName, splitTitle } from './taskUtils'
 
 type QuestState = {
   quest_id?: number
@@ -77,17 +80,6 @@ const CIV_INDEX: Record<string, number> = {
   Tarki: 5
 }
 
-const formatDuration = (seconds: number) => {
-  const hrs = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-  const secs = seconds % 60
-  const parts = []
-  if (hrs) parts.push(`${hrs}h`)
-  if (mins || hrs) parts.push(`${mins}m`)
-  parts.push(`${secs}s`)
-  return parts.join(' ')
-}
-
 export function ActionsSwitcher({
   quests,
   recipes,
@@ -112,25 +104,6 @@ export function ActionsSwitcher({
     }, 1000)
     return () => clearInterval(interval)
   }, [])
-
-  const parseJson = (value: string | object | null | undefined) => {
-    if (typeof value === 'string') {
-      try {
-        return JSON.parse(value)
-      } catch {
-        return value
-      }
-    }
-    return value
-  }
-
-  const sanitizeName = (name: string) => {
-    // Convert camelCase or PascalCase to readable text
-    return name
-      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-      .replace(/^./, (str) => str.toUpperCase()) // Capitalize first letter
-      .trim()
-  }
 
   const validateQuest = (quest: {
     levelRequired: number
@@ -371,169 +344,8 @@ export function ActionsSwitcher({
     }
   }, [publicKey, signTransaction, currentRecipe, civilization, civilizationCharacterId, connection])
 
-  const resolveProgress = (state: QuestState | RecipeState | null) => {
-    if (!state) return null
-    const started = Number(state.started_at ?? state.startedAt ?? NaN)
-    const ready = Number(state.ready_at ?? state.readyAt ?? NaN)
-    if (!Number.isFinite(started) || !Number.isFinite(ready)) return null
-    const duration = Math.max(0, ready - started)
-    const elapsed = Math.max(0, currentTime - started)
-    const percent = duration > 0 ? Math.min(100, Math.max(0, Math.round((elapsed / duration) * 100))) : 100
-    const remaining = Math.max(0, ready - currentTime)
-    const claimable = remaining <= 0
-    return { percent, remaining, claimable }
-  }
-
-  const questProgress = resolveProgress(currentQuest)
-  const recipeProgress = resolveProgress(currentRecipe)
-
-  const renderStatRequirements = (value: Record<string, number> | undefined) => {
-    const parsed = parseJson(value)
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      const entries = Object.entries(parsed as Record<string, unknown>).filter(([, val]) => Number(val) > 0)
-      if (!entries.length)
-        return (
-          <Badge colorScheme="gray" fontSize="xs">
-            None
-          </Badge>
-        )
-
-      return (
-        <Flex gap={1.5} flexWrap="wrap">
-          {entries.map(([key, val]) => {
-            const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1)
-            return (
-              <Badge key={key} colorScheme="purple" fontSize="xs" px={2} py={0.5}>
-                {capitalizedKey} {String(val ?? 0)}
-              </Badge>
-            )
-          })}
-        </Flex>
-      )
-    }
-    return (
-      <Badge colorScheme="gray" fontSize="xs">
-        None
-      </Badge>
-    )
-  }
-
-  const renderRewards = (value: QuestReward[] | undefined) => {
-    const parsed = parseJson(value)
-    if (Array.isArray(parsed)) {
-      return (
-        <Flex gap={1} flexWrap="wrap">
-          {parsed.map((item, idx) => {
-            if (item && typeof item === 'object') {
-              const obj = item as Record<string, unknown>
-              const amount = String(obj.amount ?? '')
-              const resource = String(obj.resource ?? obj.type ?? 'Reward')
-              return (
-                <Badge key={idx} colorScheme="green" fontSize="xs" px={2} py={0.5}>
-                  {amount} {resource}
-                </Badge>
-              )
-            }
-            return (
-              <Badge key={idx} colorScheme="green" fontSize="xs" px={2} py={0.5}>
-                {String(item)}
-              </Badge>
-            )
-          })}
-        </Flex>
-      )
-    }
-    return (
-      <Badge colorScheme="gray" fontSize="xs">
-        None
-      </Badge>
-    )
-  }
-
-  const renderResources = (value: RecipeInput | RecipeOutput | undefined, type: 'input' | 'output') => {
-    const parsed = parseJson(value)
-
-    if (!parsed || typeof parsed !== 'object') {
-      return (
-        <Badge colorScheme="gray" fontSize="xs">
-          None
-        </Badge>
-      )
-    }
-
-    if (!Array.isArray(parsed)) {
-      const obj = parsed as Record<string, unknown>
-
-      // Handle Craft input format: {type: "Craft", materials: [...], gold_amount: 50}
-      if (type === 'input' && obj.type === 'Craft' && Array.isArray(obj.materials)) {
-        const materials = obj.materials as Array<Record<string, unknown>>
-        const goldAmount = obj.gold_amount
-
-        return (
-          <Flex gap={1.5} flexWrap="wrap">
-            {materials.map((material, idx) => {
-              const amount = String(material.amount ?? '')
-              const rawRes = material.resource ?? material.raw_material ?? 'Material'
-              const res = sanitizeName(String(rawRes))
-              return (
-                <Badge key={`mat-${idx}`} colorScheme="orange" fontSize="xs" px={2} py={0.5}>
-                  {amount} {res}
-                </Badge>
-              )
-            })}
-            {goldAmount ? (
-              <Badge colorScheme="yellow" fontSize="xs" px={2} py={0.5}>
-                {String(goldAmount)} Gold
-              </Badge>
-            ) : null}
-          </Flex>
-        )
-      }
-
-      // Handle Forge input format: {type: "Forge", amount: 1, raw_material: "Wood"}
-      // Handle output format: {type: "Resource", amount: 1, resource: "Plank"}
-      const amount = String(obj.amount ?? '')
-      const rawRes =
-        obj.resource ?? obj.raw_material ?? obj.material ?? obj.item ?? obj.name ?? obj.displayName ?? 'Item'
-      const res = sanitizeName(String(rawRes))
-      return (
-        <Badge colorScheme={type === 'output' ? 'green' : 'orange'} fontSize="xs" px={2} py={0.5}>
-          {amount} {res}
-        </Badge>
-      )
-    }
-
-    // Handle array format (legacy or alternative format)
-    return (
-      <Flex gap={1.5} flexWrap="wrap">
-        {parsed.map((item, idx) => {
-          if (item && typeof item === 'object') {
-            const itemObj = item as Record<string, unknown>
-            const amount = String(itemObj.amount ?? '')
-            const rawRes =
-              itemObj.resource ??
-              itemObj.raw_material ??
-              itemObj.material ??
-              itemObj.item ??
-              itemObj.name ??
-              itemObj.displayName ??
-              'Item'
-            const res = sanitizeName(String(rawRes))
-            return (
-              <Badge key={idx} colorScheme={type === 'output' ? 'green' : 'orange'} fontSize="xs" px={2} py={0.5}>
-                {amount} {res}
-              </Badge>
-            )
-          }
-          return (
-            <Badge key={idx} colorScheme={type === 'output' ? 'green' : 'orange'} fontSize="xs" px={2} py={0.5}>
-              {sanitizeName(String(item))}
-            </Badge>
-          )
-        })}
-      </Flex>
-    )
-  }
+  const questProgress = resolveProgress(currentQuest, currentTime)
+  const recipeProgress = resolveProgress(currentRecipe, currentTime)
 
   const goPrev = useCallback(() => {
     setView((prev) => {
@@ -599,14 +411,14 @@ export function ActionsSwitcher({
             <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
               REQUIRED STATS
             </Text>
-            {renderStatRequirements(quest.requirements)}
+            <StatRequirementBadges value={quest.requirements} />
           </Box>
 
           <Box>
             <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
               REWARDS
             </Text>
-            {renderRewards(quest.rewards)}
+            <RewardBadges value={quest.rewards} />
           </Box>
 
           {!validation.canPerform && validation.issues.length > 0 && (
@@ -690,19 +502,19 @@ export function ActionsSwitcher({
               </Flex>
             </Box>
 
-            <Box>
-              <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                REQUIRED RESOURCES
-              </Text>
-              {renderResources(recipe.input, 'input')}
-            </Box>
+          <Box>
+            <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
+              REQUIRED RESOURCES
+            </Text>
+            <ResourceBadges value={recipe.input} type="input" />
+          </Box>
 
-            <Box>
-              <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                PRODUCES
-              </Text>
-              {renderResources(recipe.output, 'output')}
-            </Box>
+          <Box>
+            <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
+              PRODUCES
+            </Text>
+            <ResourceBadges value={recipe.output} type="output" />
+          </Box>
 
             {!validation.canPerform && validation.issues.length > 0 && (
               <Box
@@ -776,19 +588,19 @@ export function ActionsSwitcher({
               </Flex>
             </Box>
 
-            <Box>
-              <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                REQUIRED RESOURCES
-              </Text>
-              {renderResources(recipe.input, 'input')}
-            </Box>
+          <Box>
+            <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
+              REQUIRED RESOURCES
+            </Text>
+            <ResourceBadges value={recipe.input} type="input" />
+          </Box>
 
-            <Box>
-              <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                PRODUCES
-              </Text>
-              {renderResources(recipe.output, 'output')}
-            </Box>
+          <Box>
+            <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
+              PRODUCES
+            </Text>
+            <ResourceBadges value={recipe.output} type="output" />
+          </Box>
 
             {!validation.canPerform && validation.issues.length > 0 && (
               <Box
@@ -834,103 +646,20 @@ export function ActionsSwitcher({
       const questId = Number(currentQuest.quest_id ?? currentQuest.questId ?? NaN)
       const questMeta = quests.find((q) => q.id === questId)
       const questName = questMeta?.name ?? (Number.isFinite(questId) ? `Quest #${questId}` : 'Quest')
-      const nameParts = questName
-        .split('-')
-        .map((part) => part.trim())
-        .filter(Boolean)
+      const nameParts = splitTitle(questName)
       const progress = questProgress
       const rewards = parseJson(questMeta?.rewards ?? currentQuest.rewards)
 
       return (
-        <Box
-          border="1px solid rgba(255,255,255,0.1)"
-          borderRadius="md"
-          padding={4}
-          bg="rgba(255,255,255,0.02)"
-        >
-          <Stack gap={3}>
-            <Stack gap={0.5}>
-              {nameParts.map((part, idx) => (
-                <Text key={idx} color="gray.300" fontSize="sm">
-                  {sanitizeName(part)}
-                </Text>
-              ))}
-            </Stack>
-
-            <Box>
-              <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                REWARDS
-              </Text>
-              <Flex gap={1.5} flexWrap="wrap" justifyContent="center">
-                {rewards && Array.isArray(rewards) && rewards.length > 0 ? (
-                  rewards.map((reward, idx) => {
-                    const amount = String((reward as Record<string, unknown>).amount ?? '')
-                    const resource = String(
-                      (reward as Record<string, unknown>).resource ??
-                        (reward as Record<string, unknown>).type ??
-                        'Reward'
-                    )
-                    return (
-                      <Badge key={idx} colorScheme="green" fontSize="xs" px={2} py={0.5}>
-                        {amount} {resource}
-                      </Badge>
-                    )
-                  })
-                ) : (
-                  <Badge colorScheme="gray" fontSize="xs">
-                    None
-                  </Badge>
-                )}
-              </Flex>
-            </Box>
-
-            {progress ? (
-              <>
-                <Progress.Root
-                  shape="rounded"
-                  value={progress.percent}
-                  max={100}
-                  size="lg"
-                  width="full"
-                  paddingX={4}
-                  paddingY={2}
-                >
-                  <Progress.Track background="custom-dark-primary">
-                    <Progress.Range background="custom-keppel" />
-                  </Progress.Track>
-                </Progress.Root>
-
-                <Stack gap={1} align="center">
-                  <Text color="gray.300" fontSize="sm" fontWeight="600">
-                    {progress.percent}%
-                  </Text>
-                  <Text color="gray.400" fontSize="xs">
-                    {progress.claimable ? 'Ready to claim' : `Ready in ${formatDuration(progress.remaining)}`}
-                  </Text>
-                </Stack>
-              </>
-            ) : (
-              <Text color="gray.400" fontSize="xs" textAlign="center">
-                Progress unavailable
-              </Text>
-            )}
-
-            <Button
-              size="sm"
-              background="custom-blue"
-              color="black"
-              fontWeight="700"
-              _hover={{ bg: 'white', color: 'black' }}
-              disabled={!progress?.claimable || submitting === 'quest-claim'}
-              opacity={progress?.claimable && submitting !== 'quest-claim' ? 1 : 0.5}
-              cursor={progress?.claimable && submitting !== 'quest-claim' ? 'pointer' : 'not-allowed'}
-              width="full"
-              onClick={handleClaimQuest}
-            >
-              {submitting === 'quest-claim' ? 'Submitting...' : 'Claim quest'}
-            </Button>
-          </Stack>
-        </Box>
+        <CurrentTaskCard
+          titleLines={nameParts.map((part) => sanitizeName(part))}
+          primaryLabel="REWARDS"
+          primaryContent={<RewardBadges value={rewards as QuestReward[]} />}
+          progress={progress}
+          onClaim={handleClaimQuest}
+          claimLabel="Claim quest"
+          submitting={submitting === 'quest-claim'}
+        />
       )
     }
 
@@ -938,104 +667,19 @@ export function ActionsSwitcher({
       const recipeId = Number(currentRecipe.recipe_id ?? currentRecipe.recipeId ?? NaN)
       const recipeMeta = recipes.find((r) => r.id === recipeId)
       const recipeName = recipeMeta?.name ?? (Number.isFinite(recipeId) ? `Recipe #${recipeId}` : 'Recipe')
-      const nameParts = recipeName
-        .split('-')
-        .map((part) => part.trim())
-        .filter(Boolean)
-      const progress = recipeProgress ?? resolveProgress(currentRecipe)
+      const nameParts = splitTitle(recipeName)
+      const progress = recipeProgress ?? resolveProgress(currentRecipe, currentTime)
 
       return (
-        <Box
-          border="1px solid rgba(255,255,255,0.1)"
-          borderRadius="md"
-          padding={4}
-          bg="rgba(255,255,255,0.02)"
-        >
-          <Stack gap={3}>
-            <Stack gap={0.5}>
-              {nameParts.map((part, idx) => (
-                <Text key={idx} color="gray.300" fontSize="sm">
-                  {sanitizeName(part)}
-                </Text>
-              ))}
-            </Stack>
-
-            <Box>
-              <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                PRODUCES
-              </Text>
-              {(() => {
-                const output = parseJson(recipeMeta?.output ?? currentRecipe.output)
-                if (output && typeof output === 'object' && !Array.isArray(output)) {
-                  const obj = output as Record<string, unknown>
-                  const amount = String(obj.amount ?? '')
-                  const rawRes = obj.resource ?? obj.type ?? 'Item'
-                  const resource = sanitizeName(String(rawRes))
-                  return (
-                    <Flex justifyContent="center">
-                      <Badge colorScheme="green" fontSize="xs" px={2} py={0.5}>
-                        {amount} {resource}
-                      </Badge>
-                    </Flex>
-                  )
-                }
-                return (
-                  <Flex justifyContent="center">
-                    <Badge colorScheme="gray" fontSize="xs">
-                      None
-                    </Badge>
-                  </Flex>
-                )
-              })()}
-            </Box>
-
-            {progress ? (
-              <>
-                <Progress.Root
-                  shape="rounded"
-                  value={progress.percent}
-                  max={100}
-                  size="lg"
-                  width="full"
-                  paddingX={4}
-                  paddingY={2}
-                >
-                  <Progress.Track background="custom-dark-primary">
-                    <Progress.Range background="custom-keppel" />
-                  </Progress.Track>
-                </Progress.Root>
-
-                <Stack gap={1} align="center">
-                  <Text color="gray.300" fontSize="sm" fontWeight="600">
-                    {progress.percent}%
-                  </Text>
-                  <Text color="gray.400" fontSize="xs">
-                    {progress.claimable ? 'Ready to claim' : `Ready in ${formatDuration(progress.remaining)}`}
-                  </Text>
-                </Stack>
-              </>
-            ) : (
-              <Text color="gray.400" fontSize="xs" textAlign="center">
-                Progress unavailable
-              </Text>
-            )}
-
-            <Button
-              size="sm"
-              background="custom-blue"
-              color="black"
-              fontWeight="700"
-              _hover={{ bg: 'white', color: 'black' }}
-              disabled={!progress?.claimable || submitting === 'recipe-claim'}
-              opacity={progress?.claimable && submitting !== 'recipe-claim' ? 1 : 0.5}
-              cursor={progress?.claimable && submitting !== 'recipe-claim' ? 'pointer' : 'not-allowed'}
-              width="full"
-              onClick={handleClaimRecipe}
-            >
-              {submitting === 'recipe-claim' ? 'Submitting...' : 'Claim craft'}
-            </Button>
-          </Stack>
-        </Box>
+        <CurrentTaskCard
+          titleLines={nameParts.map((part) => sanitizeName(part))}
+          primaryLabel="PRODUCES"
+          primaryContent={<ResourceBadges value={recipeMeta?.output ?? currentRecipe.output} type="output" />}
+          progress={progress}
+          onClaim={handleClaimRecipe}
+          claimLabel="Claim craft"
+          submitting={submitting === 'recipe-claim'}
+        />
       )
     }
 

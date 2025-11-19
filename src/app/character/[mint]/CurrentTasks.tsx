@@ -1,11 +1,14 @@
 'use client'
 
-import { Accordion, Badge, Box, Button, Flex, Progress, Stack, Text } from '@chakra-ui/react'
+import { Accordion, Stack, Text } from '@chakra-ui/react'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, Transaction } from '@solana/web3.js'
 import { useCallback, useEffect, useState } from 'react'
 import { claimQuestIx, claimRecipeIx, findCharacterPda } from '@/lib/arising'
 import type { CodexQuest, CodexRecipe } from '@/lib/characters'
+import { CurrentTaskCard } from './CurrentTaskCard'
+import { RewardBadges, ResourceBadges } from './TaskBadges'
+import { resolveProgress, sanitizeName, splitTitle } from './taskUtils'
 
 type QuestState = {
   quest_id?: number
@@ -45,24 +48,6 @@ const CIV_INDEX: Record<string, number> = {
   Tarki: 5
 }
 
-const sanitizeName = (name: string) => {
-  return name
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (str) => str.toUpperCase())
-    .trim()
-}
-
-const formatDuration = (seconds: number) => {
-  const hrs = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-  const secs = seconds % 60
-  const parts = []
-  if (hrs) parts.push(`${hrs}h`)
-  if (mins || hrs) parts.push(`${mins}m`)
-  parts.push(`${secs}s`)
-  return parts.join(' ')
-}
-
 export function CurrentTasks({
   questState,
   recipeState,
@@ -83,21 +68,8 @@ export function CurrentTasks({
     return () => clearInterval(interval)
   }, [])
 
-  const resolveProgress = (state: QuestState | RecipeState | null) => {
-    if (!state) return null
-    const started = Number(state.started_at ?? state.startedAt ?? NaN)
-    const ready = Number(state.ready_at ?? state.readyAt ?? NaN)
-    if (!Number.isFinite(started) || !Number.isFinite(ready)) return null
-    const duration = Math.max(0, ready - started)
-    const elapsed = Math.max(0, currentTime - started)
-    const percent = duration > 0 ? Math.min(100, Math.max(0, Math.round((elapsed / duration) * 100))) : 100
-    const remaining = Math.max(0, ready - currentTime)
-    const claimable = remaining <= 0
-    return { percent, remaining, claimable }
-  }
-
-  const questProgress = resolveProgress(questState)
-  const recipeProgress = resolveProgress(recipeState)
+  const questProgress = resolveProgress(questState, currentTime)
+  const recipeProgress = resolveProgress(recipeState, currentTime)
 
   const handleClaimQuest = useCallback(async () => {
     if (!publicKey || !signTransaction || !questState) return
@@ -189,109 +161,24 @@ export function CurrentTasks({
         <Accordion.ItemContent>
           <Accordion.ItemBody paddingX={3} paddingY={3}>
             {questState ? (
-              <Stack gap={3}>
-                {(() => {
-                  const questId = Number(questState.quest_id ?? questState.questId ?? NaN)
-                  const questMeta = codexQuests.find((q) => Number(q.id) === questId)
-                  const title = questMeta?.displayName ?? (Number.isFinite(questId) ? `Quest #${questId}` : 'Quest')
-                  const parts = title.split('-').map((p) => p.trim()).filter(Boolean)
-                  return (
-                    <Stack gap={0}>
-                      {parts.length
-                        ? parts.map((line) => (
-                            <Text key={line} color="gray.300" fontSize="sm">
-                              {line}
-                            </Text>
-                          ))
-                        : (
-                            <Text color="gray.300" fontSize="sm">
-                              {title}
-                            </Text>
-                          )}
-                    </Stack>
-                  )
-                })()}
-                <Box>
-                  <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                    REWARDS
-                  </Text>
-                  {(() => {
-                    const questId = Number(questState.quest_id ?? questState.questId ?? NaN)
-                    const questMeta = codexQuests.find((q) => Number(q.id) === questId)
-                    const rewards = questMeta?.rewards ?? questState.rewards
-                    if (Array.isArray(rewards) && rewards.length > 0) {
-                      return (
-                        <Flex gap={1.5} flexWrap="wrap" justifyContent="center">
-                          {rewards.map((reward, idx) => {
-                            if (reward && typeof reward === 'object') {
-                              const amount = String((reward as Record<string, unknown>).amount ?? '')
-                              const resource = String(
-                                (reward as Record<string, unknown>).resource ??
-                                  (reward as Record<string, unknown>).type ??
-                                  'Reward'
-                              )
-                              return (
-                                <Badge key={idx} colorScheme="green" fontSize="xs" px={2} py={0.5}>
-                                  {amount} {resource}
-                                </Badge>
-                              )
-                            }
-                            return null
-                          })}
-                        </Flex>
-                      )
-                    }
-                    return (
-                      <Flex justifyContent="center">
-                        <Badge colorScheme="gray" fontSize="xs">
-                          None
-                        </Badge>
-                      </Flex>
-                    )
-                  })()}
-                </Box>
-                {questProgress && (
-                  <>
-                    <Progress.Root
-                      shape="rounded"
-                      value={questProgress.percent}
-                      max={100}
-                      size="lg"
-                      width="full"
-                      paddingX={4}
-                      paddingY={2}
-                    >
-                      <Progress.Track background="custom-dark-primary">
-                        <Progress.Range background="custom-keppel" />
-                      </Progress.Track>
-                    </Progress.Root>
-                    <Stack gap={1} align="center">
-                      <Text color="gray.300" fontSize="sm" fontWeight="600">
-                        {questProgress.percent}%
-                      </Text>
-                      <Text color="gray.400" fontSize="xs">
-                        {questProgress.claimable
-                          ? 'Ready to claim'
-                          : `Ready in ${formatDuration(questProgress.remaining)}`}
-                      </Text>
-                    </Stack>
-                  </>
-                )}
-                <Button
-                  size="sm"
-                  background="custom-blue"
-                  color="black"
-                  fontWeight="700"
-                  _hover={{ bg: 'white', color: 'black' }}
-                  disabled={!questProgress?.claimable || submitting === 'quest'}
-                  opacity={questProgress?.claimable && submitting !== 'quest' ? 1 : 0.5}
-                  cursor={questProgress?.claimable && submitting !== 'quest' ? 'pointer' : 'not-allowed'}
-                  width="full"
-                  onClick={handleClaimQuest}
-                >
-                  {submitting === 'quest' ? 'Submitting...' : 'Claim quest'}
-                </Button>
-              </Stack>
+              (() => {
+                const questId = Number(questState.quest_id ?? questState.questId ?? NaN)
+                const questMeta = codexQuests.find((q) => Number(q.id) === questId)
+                const title = questMeta?.displayName ?? (Number.isFinite(questId) ? `Quest #${questId}` : 'Quest')
+                const parts = splitTitle(title).map((line) => sanitizeName(line))
+                const rewards = questMeta?.rewards ?? questState.rewards
+                return (
+                  <CurrentTaskCard
+                    titleLines={parts}
+                    primaryLabel="REWARDS"
+                    primaryContent={<RewardBadges value={rewards} />}
+                    progress={questProgress}
+                    onClaim={handleClaimQuest}
+                    claimLabel="Claim quest"
+                    submitting={submitting === 'quest'}
+                  />
+                )
+              })()
             ) : (
               <Text color="gray.500" fontSize="sm">
                 None
@@ -321,104 +208,25 @@ export function CurrentTasks({
         <Accordion.ItemContent>
           <Accordion.ItemBody paddingX={3} paddingY={3}>
             {recipeState ? (
-              <Stack gap={3}>
-                {(() => {
-                  const recipeId = Number(recipeState.recipe_id ?? recipeState.recipeId ?? NaN)
-                  const recipeMeta = codexRecipes.find((r) => Number(r.id) === recipeId)
-                  const displayName =
-                    recipeMeta?.displayName ?? (Number.isFinite(recipeId) ? `Recipe #${recipeId}` : 'Recipe')
-                  const parts = sanitizeName(displayName)
-                    .split('-')
-                    .map((p) => p.trim())
-                    .filter(Boolean)
-                  return (
-                    <Stack gap={0}>
-                      {parts.length
-                        ? parts.map((line) => (
-                            <Text key={line} color="gray.300" fontSize="sm">
-                              {line}
-                            </Text>
-                          ))
-                        : (
-                            <Text color="gray.300" fontSize="sm">
-                              {sanitizeName(displayName)}
-                            </Text>
-                          )}
-                    </Stack>
-                  )
-                })()}
-                <Box>
-                  <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                    PRODUCES
-                  </Text>
-                  {(() => {
-                    const recipeId = Number(recipeState.recipe_id ?? recipeState.recipeId ?? NaN)
-                    const recipeMeta = codexRecipes.find((r) => Number(r.id) === recipeId)
-                    const output = recipeMeta?.output ?? recipeState.output
-                    if (output && typeof output === 'object' && !Array.isArray(output)) {
-                      const obj = output as Record<string, unknown>
-                      const amount = String(obj.amount ?? '')
-                      const rawRes = obj.resource ?? obj.type ?? 'Item'
-                      const resource = sanitizeName(String(rawRes))
-                      return (
-                        <Flex justifyContent="center">
-                          <Badge colorScheme="green" fontSize="xs" px={2} py={0.5}>
-                            {amount} {resource}
-                          </Badge>
-                        </Flex>
-                      )
-                    }
-                    return (
-                      <Flex justifyContent="center">
-                        <Badge colorScheme="gray" fontSize="xs">
-                          None
-                        </Badge>
-                      </Flex>
-                    )
-                  })()}
-                </Box>
-                {recipeProgress && (
-                  <>
-                    <Progress.Root
-                      shape="rounded"
-                      value={recipeProgress.percent}
-                      max={100}
-                      size="lg"
-                      width="full"
-                      paddingX={4}
-                      paddingY={2}
-                    >
-                      <Progress.Track background="custom-dark-primary">
-                        <Progress.Range background="custom-keppel" />
-                      </Progress.Track>
-                    </Progress.Root>
-                    <Stack gap={1} align="center">
-                      <Text color="gray.300" fontSize="sm" fontWeight="600">
-                        {recipeProgress.percent}%
-                      </Text>
-                      <Text color="gray.400" fontSize="xs">
-                        {recipeProgress.claimable
-                          ? 'Ready to claim'
-                          : `Ready in ${formatDuration(recipeProgress.remaining)}`}
-                      </Text>
-                    </Stack>
-                  </>
-                )}
-                <Button
-                  size="sm"
-                  background="custom-blue"
-                  color="black"
-                  fontWeight="700"
-                  _hover={{ bg: 'white', color: 'black' }}
-                  disabled={!recipeProgress?.claimable || submitting === 'recipe'}
-                  opacity={recipeProgress?.claimable && submitting !== 'recipe' ? 1 : 0.5}
-                  cursor={recipeProgress?.claimable && submitting !== 'recipe' ? 'pointer' : 'not-allowed'}
-                  width="full"
-                  onClick={handleClaimRecipe}
-                >
-                  {submitting === 'recipe' ? 'Submitting...' : 'Claim craft'}
-                </Button>
-              </Stack>
+              (() => {
+                const recipeId = Number(recipeState.recipe_id ?? recipeState.recipeId ?? NaN)
+                const recipeMeta = codexRecipes.find((r) => Number(r.id) === recipeId)
+                const displayName =
+                  recipeMeta?.displayName ?? (Number.isFinite(recipeId) ? `Recipe #${recipeId}` : 'Recipe')
+                const parts = splitTitle(sanitizeName(displayName)).map((line) => sanitizeName(line))
+                const output = recipeMeta?.output ?? recipeState.output
+                return (
+                  <CurrentTaskCard
+                    titleLines={parts}
+                    primaryLabel="PRODUCES"
+                    primaryContent={<ResourceBadges value={output} type="output" />}
+                    progress={recipeProgress}
+                    onClaim={handleClaimRecipe}
+                    claimLabel="Claim craft"
+                    submitting={submitting === 'recipe'}
+                  />
+                )
+              })()
             ) : (
               <Text color="gray.500" fontSize="sm">
                 None
