@@ -1,11 +1,31 @@
 'use client'
 
-import { Badge, Box, Button, Flex, Stack, Text } from '@chakra-ui/react'
+import { Badge, Box, Button, Flex, Progress, Stack, Text } from '@chakra-ui/react'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, Transaction } from '@solana/web3.js'
-import { type JSX, useCallback, useState } from 'react'
-import { findCharacterPda, startQuestIx, startRecipeIx } from '@/lib/arising'
+import { type JSX, useCallback, useEffect, useState } from 'react'
+import { claimQuestIx, claimRecipeIx, findCharacterPda, startQuestIx, startRecipeIx } from '@/lib/arising'
 import type { QuestReward, RecipeInput, RecipeOutput } from '@/lib/characters'
+
+type QuestState = {
+  quest_id?: number
+  questId?: number
+  started_at?: string | number
+  startedAt?: string | number
+  ready_at?: string | number
+  readyAt?: string | number
+  rewards?: unknown
+}
+
+type RecipeState = {
+  recipe_id?: number
+  recipeId?: number
+  started_at?: string | number
+  startedAt?: string | number
+  ready_at?: string | number
+  readyAt?: string | number
+  output?: unknown
+}
 
 export type ActionsSwitcherProps = {
   quests: {
@@ -37,6 +57,8 @@ export type ActionsSwitcherProps = {
   }>
   civilization: string
   civilizationCharacterId: number
+  currentQuest: QuestState | null
+  currentRecipe: RecipeState | null
 }
 
 const VIEWS = ['quests', 'craft', 'forge'] as const
@@ -55,6 +77,17 @@ const CIV_INDEX: Record<string, number> = {
   Tarki: 5
 }
 
+const formatDuration = (seconds: number) => {
+  const hrs = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  const parts = []
+  if (hrs) parts.push(`${hrs}h`)
+  if (mins || hrs) parts.push(`${mins}m`)
+  parts.push(`${secs}s`)
+  return parts.join(' ')
+}
+
 export function ActionsSwitcher({
   quests,
   recipes,
@@ -63,12 +96,22 @@ export function ActionsSwitcher({
   characterStats,
   inventory,
   civilization,
-  civilizationCharacterId
+  civilizationCharacterId,
+  currentQuest,
+  currentRecipe
 }: ActionsSwitcherProps) {
   const { connection } = useConnection()
   const { publicKey, signTransaction } = useWallet()
   const [view, setView] = useState<(typeof VIEWS)[number]>('quests')
-  const [submitting, setSubmitting] = useState<number | null>(null)
+  const [submitting, setSubmitting] = useState<number | 'quest-claim' | 'recipe-claim' | null>(null)
+  const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Math.floor(Date.now() / 1000))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   const parseJson = (value: string | object | null | undefined) => {
     if (typeof value === 'string') {
@@ -214,7 +257,6 @@ export function ActionsSwitcher({
         const sig = await connection.sendRawTransaction(signed.serialize())
         await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
 
-        window.location.reload()
       } catch (error) {
         console.error('Failed to start quest:', error)
         alert(`Failed to start quest: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -251,7 +293,6 @@ export function ActionsSwitcher({
         const sig = await connection.sendRawTransaction(signed.serialize())
         await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
 
-        window.location.reload()
       } catch (error) {
         console.error('Failed to start recipe:', error)
         alert(`Failed to start recipe: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -261,6 +302,90 @@ export function ActionsSwitcher({
     },
     [publicKey, signTransaction, civilization, civilizationCharacterId, connection]
   )
+
+  const handleClaimQuest = useCallback(async () => {
+    if (!publicKey || !signTransaction || !currentQuest) return
+
+    try {
+      setSubmitting('quest-claim')
+      const questId = Number(currentQuest.quest_id ?? currentQuest.questId ?? NaN)
+      const civIndex = CIV_INDEX[civilization] ?? 0
+      const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
+
+      const ix = claimQuestIx(
+        { civilization: civIndex, characterId: civilizationCharacterId, questId },
+        { character: characterPda, authority: publicKey }
+      )
+
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
+      const computeIxs = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1_000 })
+      ]
+
+      const tx = new Transaction({ feePayer: publicKey, recentBlockhash: blockhash }).add(...computeIxs, ix)
+
+      const signed = await signTransaction(tx)
+      const sig = await connection.sendRawTransaction(signed.serialize())
+      await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
+
+    } catch (error) {
+      console.error('Failed to claim quest:', error)
+      alert(`Failed to claim quest: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setSubmitting(null)
+    }
+  }, [publicKey, signTransaction, currentQuest, civilization, civilizationCharacterId, connection])
+
+  const handleClaimRecipe = useCallback(async () => {
+    if (!publicKey || !signTransaction || !currentRecipe) return
+
+    try {
+      setSubmitting('recipe-claim')
+      const recipeId = Number(currentRecipe.recipe_id ?? currentRecipe.recipeId ?? NaN)
+      const civIndex = CIV_INDEX[civilization] ?? 0
+      const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
+
+      const ix = claimRecipeIx(
+        { civilization: civIndex, characterId: civilizationCharacterId, recipeId },
+        { character: characterPda, authority: publicKey }
+      )
+
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
+      const computeIxs = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1_000 })
+      ]
+
+      const tx = new Transaction({ feePayer: publicKey, recentBlockhash: blockhash }).add(...computeIxs, ix)
+
+      const signed = await signTransaction(tx)
+      const sig = await connection.sendRawTransaction(signed.serialize())
+      await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
+
+    } catch (error) {
+      console.error('Failed to claim recipe:', error)
+      alert(`Failed to claim recipe: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setSubmitting(null)
+    }
+  }, [publicKey, signTransaction, currentRecipe, civilization, civilizationCharacterId, connection])
+
+  const resolveProgress = (state: QuestState | RecipeState | null) => {
+    if (!state) return null
+    const started = Number(state.started_at ?? state.startedAt ?? NaN)
+    const ready = Number(state.ready_at ?? state.readyAt ?? NaN)
+    if (!Number.isFinite(started) || !Number.isFinite(ready)) return null
+    const duration = Math.max(0, ready - started)
+    const elapsed = Math.max(0, currentTime - started)
+    const percent = duration > 0 ? Math.min(100, Math.max(0, Math.round((elapsed / duration) * 100))) : 100
+    const remaining = Math.max(0, ready - currentTime)
+    const claimable = remaining <= 0
+    return { percent, remaining, claimable }
+  }
+
+  const questProgress = resolveProgress(currentQuest)
+  const recipeProgress = resolveProgress(currentRecipe)
 
   const renderStatRequirements = (value: Record<string, number> | undefined) => {
     const parsed = parseJson(value)
@@ -704,23 +829,246 @@ export function ActionsSwitcher({
       )
     })
 
-  let content: JSX.Element | JSX.Element[] = questSections.length
-    ? questSections.map((section) => (
-        <Stack key={section.title} gap={2} border="1px solid rgba(255,255,255,0.1)" borderRadius="md" padding={3}>
-          <Text color="white" fontWeight="800">
-            {section.title}
-          </Text>
-          <Text color="gray.400" fontSize="sm">
-            {section.copy}
-          </Text>
-          <Stack gap={2}>{section.items}</Stack>
-        </Stack>
-      ))
-    : [<Text key="no-quests">None</Text>]
+  const renderCurrentTask = () => {
+    if (isQuests && currentQuest) {
+      const questId = Number(currentQuest.quest_id ?? currentQuest.questId ?? NaN)
+      const questMeta = quests.find((q) => q.id === questId)
+      const questName = questMeta?.name ?? (Number.isFinite(questId) ? `Quest #${questId}` : 'Quest')
+      const nameParts = questName
+        .split('-')
+        .map((part) => part.trim())
+        .filter(Boolean)
+      const progress = questProgress
+      const rewards = parseJson(questMeta?.rewards ?? currentQuest.rewards)
 
-  if (isCraft) content = craftList.length ? craftList : [<Text key="no-craft">None</Text>]
-  if (view === 'forge') content = forgeList.length ? forgeList : [<Text key="no-forge">None</Text>]
-  const hasContent = Array.isArray(content) ? content.length > 0 : true
+      return (
+        <Box
+          border="1px solid rgba(255,255,255,0.1)"
+          borderRadius="md"
+          padding={4}
+          bg="rgba(255,255,255,0.02)"
+        >
+          <Stack gap={3}>
+            <Stack gap={0.5}>
+              {nameParts.map((part, idx) => (
+                <Text key={idx} color="gray.300" fontSize="sm">
+                  {sanitizeName(part)}
+                </Text>
+              ))}
+            </Stack>
+
+            <Box>
+              <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
+                REWARDS
+              </Text>
+              <Flex gap={1.5} flexWrap="wrap" justifyContent="center">
+                {rewards && Array.isArray(rewards) && rewards.length > 0 ? (
+                  rewards.map((reward, idx) => {
+                    const amount = String((reward as Record<string, unknown>).amount ?? '')
+                    const resource = String(
+                      (reward as Record<string, unknown>).resource ??
+                        (reward as Record<string, unknown>).type ??
+                        'Reward'
+                    )
+                    return (
+                      <Badge key={idx} colorScheme="green" fontSize="xs" px={2} py={0.5}>
+                        {amount} {resource}
+                      </Badge>
+                    )
+                  })
+                ) : (
+                  <Badge colorScheme="gray" fontSize="xs">
+                    None
+                  </Badge>
+                )}
+              </Flex>
+            </Box>
+
+            {progress ? (
+              <>
+                <Progress.Root
+                  shape="rounded"
+                  value={progress.percent}
+                  max={100}
+                  size="lg"
+                  width="full"
+                  paddingX={4}
+                  paddingY={2}
+                >
+                  <Progress.Track background="custom-dark-primary">
+                    <Progress.Range background="custom-keppel" />
+                  </Progress.Track>
+                </Progress.Root>
+
+                <Stack gap={1} align="center">
+                  <Text color="gray.300" fontSize="sm" fontWeight="600">
+                    {progress.percent}%
+                  </Text>
+                  <Text color="gray.400" fontSize="xs">
+                    {progress.claimable ? 'Ready to claim' : `Ready in ${formatDuration(progress.remaining)}`}
+                  </Text>
+                </Stack>
+              </>
+            ) : (
+              <Text color="gray.400" fontSize="xs" textAlign="center">
+                Progress unavailable
+              </Text>
+            )}
+
+            <Button
+              size="sm"
+              background="custom-blue"
+              color="black"
+              fontWeight="700"
+              _hover={{ bg: 'white', color: 'black' }}
+              disabled={!progress?.claimable || submitting === 'quest-claim'}
+              opacity={progress?.claimable && submitting !== 'quest-claim' ? 1 : 0.5}
+              cursor={progress?.claimable && submitting !== 'quest-claim' ? 'pointer' : 'not-allowed'}
+              width="full"
+              onClick={handleClaimQuest}
+            >
+              {submitting === 'quest-claim' ? 'Submitting...' : 'Claim quest'}
+            </Button>
+          </Stack>
+        </Box>
+      )
+    }
+
+    if ((isCraft || view === 'forge') && currentRecipe) {
+      const recipeId = Number(currentRecipe.recipe_id ?? currentRecipe.recipeId ?? NaN)
+      const recipeMeta = recipes.find((r) => r.id === recipeId)
+      const recipeName = recipeMeta?.name ?? (Number.isFinite(recipeId) ? `Recipe #${recipeId}` : 'Recipe')
+      const nameParts = recipeName
+        .split('-')
+        .map((part) => part.trim())
+        .filter(Boolean)
+      const progress = recipeProgress ?? resolveProgress(currentRecipe)
+
+      return (
+        <Box
+          border="1px solid rgba(255,255,255,0.1)"
+          borderRadius="md"
+          padding={4}
+          bg="rgba(255,255,255,0.02)"
+        >
+          <Stack gap={3}>
+            <Stack gap={0.5}>
+              {nameParts.map((part, idx) => (
+                <Text key={idx} color="gray.300" fontSize="sm">
+                  {sanitizeName(part)}
+                </Text>
+              ))}
+            </Stack>
+
+            <Box>
+              <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
+                PRODUCES
+              </Text>
+              {(() => {
+                const output = parseJson(recipeMeta?.output ?? currentRecipe.output)
+                if (output && typeof output === 'object' && !Array.isArray(output)) {
+                  const obj = output as Record<string, unknown>
+                  const amount = String(obj.amount ?? '')
+                  const rawRes = obj.resource ?? obj.type ?? 'Item'
+                  const resource = sanitizeName(String(rawRes))
+                  return (
+                    <Flex justifyContent="center">
+                      <Badge colorScheme="green" fontSize="xs" px={2} py={0.5}>
+                        {amount} {resource}
+                      </Badge>
+                    </Flex>
+                  )
+                }
+                return (
+                  <Flex justifyContent="center">
+                    <Badge colorScheme="gray" fontSize="xs">
+                      None
+                    </Badge>
+                  </Flex>
+                )
+              })()}
+            </Box>
+
+            {progress ? (
+              <>
+                <Progress.Root
+                  shape="rounded"
+                  value={progress.percent}
+                  max={100}
+                  size="lg"
+                  width="full"
+                  paddingX={4}
+                  paddingY={2}
+                >
+                  <Progress.Track background="custom-dark-primary">
+                    <Progress.Range background="custom-keppel" />
+                  </Progress.Track>
+                </Progress.Root>
+
+                <Stack gap={1} align="center">
+                  <Text color="gray.300" fontSize="sm" fontWeight="600">
+                    {progress.percent}%
+                  </Text>
+                  <Text color="gray.400" fontSize="xs">
+                    {progress.claimable ? 'Ready to claim' : `Ready in ${formatDuration(progress.remaining)}`}
+                  </Text>
+                </Stack>
+              </>
+            ) : (
+              <Text color="gray.400" fontSize="xs" textAlign="center">
+                Progress unavailable
+              </Text>
+            )}
+
+            <Button
+              size="sm"
+              background="custom-blue"
+              color="black"
+              fontWeight="700"
+              _hover={{ bg: 'white', color: 'black' }}
+              disabled={!progress?.claimable || submitting === 'recipe-claim'}
+              opacity={progress?.claimable && submitting !== 'recipe-claim' ? 1 : 0.5}
+              cursor={progress?.claimable && submitting !== 'recipe-claim' ? 'pointer' : 'not-allowed'}
+              width="full"
+              onClick={handleClaimRecipe}
+            >
+              {submitting === 'recipe-claim' ? 'Submitting...' : 'Claim craft'}
+            </Button>
+          </Stack>
+        </Box>
+      )
+    }
+
+    return null
+  }
+
+  const currentTaskView = renderCurrentTask()
+
+  let content: JSX.Element | JSX.Element[] | null = currentTaskView
+
+  if (!content) {
+    if (isQuests) {
+      content = questSections.length
+        ? questSections.map((section) => (
+            <Stack key={section.title} gap={2} border="1px solid rgba(255,255,255,0.1)" borderRadius="md" padding={3}>
+              <Text color="white" fontWeight="800">
+                {section.title}
+              </Text>
+              <Text color="gray.400" fontSize="sm">
+                {section.copy}
+              </Text>
+              <Stack gap={2}>{section.items}</Stack>
+            </Stack>
+          ))
+        : [<Text key="no-quests">None</Text>]
+    } else if (isCraft) {
+      content = craftList.length ? craftList : [<Text key="no-craft">None</Text>]
+    } else if (view === 'forge') {
+      content = forgeList.length ? forgeList : [<Text key="no-forge">None</Text>]
+    }
+  }
+
+  const hasContent = content !== null && (Array.isArray(content) ? content.length > 0 : true)
 
   return (
     <Stack gap={4} width="full">

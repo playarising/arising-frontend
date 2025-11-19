@@ -1,4 +1,4 @@
-import { Accordion, Badge, Box, Button, Flex, Grid, GridItem, Progress, Stack, Text } from '@chakra-ui/react'
+import { Accordion, Box, Button, Grid, GridItem, Stack, Text } from '@chakra-ui/react'
 import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { Connection, clusterApiUrl, PublicKey } from '@solana/web3.js'
 import Image from 'next/image'
@@ -12,6 +12,7 @@ import {
   levelFromExperience
 } from '@/lib'
 import { ActionsSwitcher } from './ActionsSwitcher'
+import { CurrentTasks } from './CurrentTasks'
 import { EnergyStatus } from './EnergyStatus'
 
 type Params = Promise<{ mint: string }>
@@ -92,22 +93,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
       .split('_')
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ')
-  const sanitizeName = (name: string) => {
-    return name
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, (str) => str.toUpperCase())
-      .trim()
-  }
-  const formatDuration = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600)
-    const mins = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
-    const parts = []
-    if (hrs) parts.push(`${hrs}h`)
-    if (mins || hrs) parts.push(`${mins}m`)
-    parts.push(`${secs}s`)
-    return parts.join(' ')
-  }
 
   const parseState = (value: string | object | null | undefined) => {
     if (!value) return null
@@ -124,23 +109,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
 
   const resolvedQuestState = parseState(character.currentQuest)
   const resolvedRecipeState = parseState(character.currentRecipe)
-
-  const resolveProgress = (state: Record<string, unknown> | null) => {
-    if (!state) return null
-    const started = Number(state.started_at ?? state.startedAt ?? NaN)
-    const ready = Number(state.ready_at ?? state.readyAt ?? NaN)
-    if (!Number.isFinite(started) || !Number.isFinite(ready)) return null
-    const nowSec = Math.floor(Date.now() / 1000)
-    const duration = Math.max(0, ready - started)
-    const elapsed = Math.max(0, nowSec - started)
-    const percent = duration > 0 ? Math.min(100, Math.max(0, Math.round((elapsed / duration) * 100))) : 100
-    const remaining = Math.max(0, ready - nowSec)
-    const claimable = remaining <= 0
-    return { percent, remaining, claimable }
-  }
-
-  const questProgress = resolveProgress(resolvedQuestState)
-  const recipeProgress = resolveProgress(resolvedRecipeState)
 
   const availableQuests = codex.quests
     .filter((item) => (item.levelRequired ?? 0) <= characterLevel)
@@ -371,213 +339,14 @@ export default async function CharacterPage({ params }: { params: Params }) {
         </Accordion.Item>
       )}
       {options?.includeTasks && (
-        <>
-          <Accordion.Item value={`${valuePrefix}-current-quest`}>
-            <Accordion.ItemTrigger
-              paddingX={3}
-              paddingY={2}
-              _hover={{ bg: 'rgba(255,255,255,0.08)' }}
-              display="flex"
-              alignItems="center"
-              gap={2}
-              color="white"
-              fontWeight="700"
-              fontSize="md"
-            >
-              <Text flex="1" textAlign="left">
-                Current quest
-              </Text>
-              <Accordion.ItemIndicator />
-            </Accordion.ItemTrigger>
-            <Accordion.ItemContent>
-              <Accordion.ItemBody paddingX={3} paddingY={3}>
-                {resolvedQuestState ? (
-                  <Stack gap={3}>
-                    <Text color="white" fontWeight="800" fontSize="md">
-                      {(() => {
-                        const questId = Number(resolvedQuestState.quest_id ?? resolvedQuestState.questId ?? NaN)
-                        const questMeta = codex.quests.find((q) => Number(q.id) === questId)
-                        return questMeta?.displayName ?? (Number.isFinite(questId) ? `Quest #${questId}` : 'Quest')
-                      })()}
-                    </Text>
-                    <Box>
-                      <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                        REWARDS
-                      </Text>
-                      {(() => {
-                        const questId = Number(resolvedQuestState.quest_id ?? resolvedQuestState.questId ?? NaN)
-                        const questMeta = codex.quests.find((q) => Number(q.id) === questId)
-                        const rewards = questMeta?.rewards ?? resolvedQuestState.rewards
-                        if (Array.isArray(rewards) && rewards.length > 0) {
-                          return (
-                            <Flex gap={1.5} flexWrap="wrap">
-                              {rewards.map((reward, idx) => {
-                                if (reward && typeof reward === 'object') {
-                                  const amount = String((reward as Record<string, unknown>).amount ?? '')
-                                  const resource = String(
-                                    (reward as Record<string, unknown>).resource ??
-                                      (reward as Record<string, unknown>).type ??
-                                      'Reward'
-                                  )
-                                  return (
-                                    <Badge key={idx} colorScheme="green" fontSize="xs" px={2} py={0.5}>
-                                      {amount} {resource}
-                                    </Badge>
-                                  )
-                                }
-                                return null
-                              })}
-                            </Flex>
-                          )
-                        }
-                        return (
-                          <Badge colorScheme="gray" fontSize="xs">
-                            None
-                          </Badge>
-                        )
-                      })()}
-                    </Box>
-                    {questProgress && (
-                      <>
-                        <Progress.Root
-                          shape="rounded"
-                          value={questProgress.percent}
-                          max={100}
-                          size="lg"
-                          width="full"
-                          paddingX={4}
-                          paddingY={2}
-                        >
-                          <Progress.Track background="custom-dark-primary">
-                            <Progress.Range background="custom-keppel" />
-                          </Progress.Track>
-                        </Progress.Root>
-                        <Text color="gray.400" fontSize="xs">
-                          {questProgress.claimable
-                            ? 'Ready to claim'
-                            : `Ready in ${formatDuration(questProgress.remaining)}`}
-                        </Text>
-                      </>
-                    )}
-                    <Button
-                      size="sm"
-                      background="custom-blue"
-                      color="black"
-                      fontWeight="700"
-                      _hover={{ bg: 'white', color: 'black' }}
-                      disabled={!questProgress?.claimable}
-                      width="full"
-                    >
-                      Claim quest
-                    </Button>
-                  </Stack>
-                ) : (
-                  <Text color="gray.500" fontSize="sm">
-                    None
-                  </Text>
-                )}
-              </Accordion.ItemBody>
-            </Accordion.ItemContent>
-          </Accordion.Item>
-
-          <Accordion.Item value={`${valuePrefix}-current-recipe`}>
-            <Accordion.ItemTrigger
-              paddingX={3}
-              paddingY={2}
-              _hover={{ bg: 'rgba(255,255,255,0.08)' }}
-              display="flex"
-              alignItems="center"
-              gap={2}
-              color="white"
-              fontWeight="700"
-              fontSize="md"
-            >
-              <Text flex="1" textAlign="left">
-                Current craft
-              </Text>
-              <Accordion.ItemIndicator />
-            </Accordion.ItemTrigger>
-            <Accordion.ItemContent>
-              <Accordion.ItemBody paddingX={3} paddingY={3}>
-                {resolvedRecipeState ? (
-                  <Stack gap={3}>
-                    <Text color="white" fontWeight="800" fontSize="md">
-                      {(() => {
-                        const recipeId = Number(resolvedRecipeState.recipe_id ?? resolvedRecipeState.recipeId ?? NaN)
-                        const recipeMeta = codex.recipes.find((r) => Number(r.id) === recipeId)
-                        const displayName = recipeMeta?.displayName ?? (Number.isFinite(recipeId) ? `Recipe #${recipeId}` : 'Recipe')
-                        return sanitizeName(displayName)
-                      })()}
-                    </Text>
-                    <Box>
-                      <Text color="gray.400" fontSize="xs" fontWeight="600" mb={1.5}>
-                        PRODUCES
-                      </Text>
-                      {(() => {
-                        const recipeId = Number(resolvedRecipeState.recipe_id ?? resolvedRecipeState.recipeId ?? NaN)
-                        const recipeMeta = codex.recipes.find((r) => Number(r.id) === recipeId)
-                        const output = recipeMeta?.output ?? resolvedRecipeState.output
-                        if (output && typeof output === 'object' && !Array.isArray(output)) {
-                          const obj = output as Record<string, unknown>
-                          const amount = String(obj.amount ?? '')
-                          const rawRes = obj.resource ?? obj.type ?? 'Item'
-                          const resource = sanitizeName(String(rawRes))
-                          return (
-                            <Badge colorScheme="green" fontSize="xs" px={2} py={0.5}>
-                              {amount} {resource}
-                            </Badge>
-                          )
-                        }
-                        return (
-                          <Badge colorScheme="gray" fontSize="xs">
-                            None
-                          </Badge>
-                        )
-                      })()}
-                    </Box>
-                    {recipeProgress && (
-                      <>
-                        <Progress.Root
-                          shape="rounded"
-                          value={recipeProgress.percent}
-                          max={100}
-                          size="lg"
-                          width="full"
-                          paddingX={4}
-                          paddingY={2}
-                        >
-                          <Progress.Track background="custom-dark-primary">
-                            <Progress.Range background="custom-keppel" />
-                          </Progress.Track>
-                        </Progress.Root>
-                        <Text color="gray.400" fontSize="xs">
-                          {recipeProgress.claimable
-                            ? 'Ready to claim'
-                            : `Ready in ${formatDuration(recipeProgress.remaining)}`}
-                        </Text>
-                      </>
-                    )}
-                    <Button
-                      size="sm"
-                      background="custom-blue"
-                      color="black"
-                      fontWeight="700"
-                      _hover={{ bg: 'white', color: 'black' }}
-                      disabled={!recipeProgress?.claimable}
-                      width="full"
-                    >
-                      Claim craft
-                    </Button>
-                  </Stack>
-                ) : (
-                  <Text color="gray.500" fontSize="sm">
-                    None
-                  </Text>
-                )}
-              </Accordion.ItemBody>
-            </Accordion.ItemContent>
-          </Accordion.Item>
-        </>
+        <CurrentTasks
+          questState={resolvedQuestState}
+          recipeState={resolvedRecipeState}
+          codexQuests={codex.quests}
+          codexRecipes={codex.recipes}
+          civilization={character.civilization}
+          civilizationCharacterId={character.civilizationCharacterId}
+        />
       )}
       {options?.includeInventory && (
         <Accordion.Item value={`${valuePrefix}-inventory`}>
@@ -723,6 +492,8 @@ export default async function CharacterPage({ params }: { params: Params }) {
               inventory={inventoryBalances}
               civilization={character.civilization}
               civilizationCharacterId={character.civilizationCharacterId}
+              currentQuest={resolvedQuestState}
+              currentRecipe={resolvedRecipeState}
             />
           </Stack>
         </GridItem>
