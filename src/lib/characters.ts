@@ -8,7 +8,11 @@ export type CharacterRecord = {
   nftMint: string
   energy?: number | null
   experience?: number | null
+  lastEnergyRefill?: number | string | null
   stats?: Record<string, number> | string | null
+  attributes?: Record<string, number> | string | null
+  currentQuest?: unknown
+  currentRecipe?: unknown
 }
 
 export type CharacterWithMetadata = CharacterRecord & {
@@ -24,6 +28,53 @@ export type LevelCurveEntry = {
   level: number
   xpToNext: number
   cumulativeXp: number
+}
+
+export type CodexEquipment = {
+  idx: number
+  displayName: string
+  category: string
+  allowedSlots: unknown
+  occupiesBothHands: boolean
+  occupiesForearm: boolean
+  levelRequired: number
+  attributeBonus: unknown
+  raw: unknown
+}
+
+export type CodexQuest = {
+  id: number
+  questType: string
+  name?: string
+  displayName: string
+  levelRequired: number
+  cooldownSeconds: number
+  baseEnergyCost: number
+  minimumStats: unknown
+  rewards: unknown
+  raw: unknown
+}
+
+export type CodexRecipe = {
+  id: number
+  recipeType: string
+  name?: string
+  displayName: string
+  levelRequired: number
+  cooldownSeconds: number
+  baseEnergyCost: number
+  minimumStats: unknown
+  input: unknown
+  output: unknown
+  raw: unknown
+}
+
+export type CodexResourceMint = {
+  resourceId: number
+  resource: string
+  displayName: string
+  mint: string
+  raw: unknown
 }
 
 export const LEVEL_CAP = 150
@@ -203,10 +254,14 @@ const CHARACTER_QUERY = `
         nftMint
         stats
         energy
+        attributes
+        currentQuest
+        currentRecipe
+        lastEnergyRefill
         experience
       }
+    }
   }
-}
 `
 
 const CHARACTER_BY_MINT_QUERY = `
@@ -219,7 +274,67 @@ const CHARACTER_BY_MINT_QUERY = `
       nftMint
       stats
       energy
+      attributes
+      currentQuest
+      currentRecipe
+      lastEnergyRefill
       experience
+    }
+  }
+`
+
+const CODEX_QUERY = `
+  query CodexData {
+    allCodexEquipments {
+      nodes {
+        idx
+        displayName
+        category
+        allowedSlots
+        occupiesBothHands
+        occupiesForearm
+        levelRequired
+        attributeBonus
+        raw
+      }
+    }
+    allCodexQuests {
+      nodes {
+        id
+        questType
+        name
+        displayName
+        levelRequired
+        cooldownSeconds
+        baseEnergyCost
+        minimumStats
+        rewards
+        raw
+      }
+    }
+    allCodexRecipes {
+      nodes {
+        id
+        recipeType
+        name
+        displayName
+        levelRequired
+        cooldownSeconds
+        baseEnergyCost
+        minimumStats
+        input
+        output
+        raw
+      }
+    }
+    allCodexResourceMints {
+      nodes {
+        resourceId
+        resource
+        displayName
+        mint
+        raw
+      }
     }
   }
 `
@@ -280,4 +395,33 @@ export async function fetchCharacterByMint(mint: string): Promise<CharacterRecor
   }
   const node = json?.data?.characterByNftMint as CharacterRecord | null | undefined
   return node ?? null
+}
+
+export async function fetchCodex(): Promise<{
+  equipments: CodexEquipment[]
+  quests: CodexQuest[]
+  recipes: CodexRecipe[]
+  resourceMints: CodexResourceMint[]
+}> {
+  const res = await fetch(INDEXER_ENDPOINT, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ query: CODEX_QUERY })
+  })
+
+  if (!res.ok) {
+    throw new Error(`Indexer error: ${res.status}`)
+  }
+
+  const json = await res.json()
+  if (json?.errors) {
+    console.error('Indexer GraphQL errors', json.errors)
+  }
+
+  return {
+    equipments: (json?.data?.allCodexEquipments?.nodes ?? []) as CodexEquipment[],
+    quests: (json?.data?.allCodexQuests?.nodes ?? []) as CodexQuest[],
+    recipes: (json?.data?.allCodexRecipes?.nodes ?? []) as CodexRecipe[],
+    resourceMints: (json?.data?.allCodexResourceMints?.nodes ?? []) as CodexResourceMint[]
+  }
 }

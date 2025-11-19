@@ -145,6 +145,7 @@ export function PlayContent() {
   const [status, setStatus] = useState<Status>({ state: 'idle' })
   const [showMintModal, setShowMintModal] = useState(false)
   const hasCharacters = characters.length > 0
+  const multipleCharacters = characters.length > 1
   const [fadeKey, setFadeKey] = useState(0)
   const [direction, setDirection] = useState<1 | -1>(1)
 
@@ -481,6 +482,7 @@ export function PlayContent() {
               variant="ghost"
               color="white"
               onClick={() => changeIndex('prev')}
+              isDisabled={!multipleCharacters}
               alignSelf="center"
               display="flex"
               alignItems="center"
@@ -674,6 +676,7 @@ export function PlayContent() {
               variant="ghost"
               color="white"
               onClick={() => changeIndex('next')}
+              isDisabled={!multipleCharacters}
               aria-label="Next character"
               alignSelf="center"
               display="flex"
