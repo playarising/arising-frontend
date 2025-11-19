@@ -17,7 +17,8 @@ import {
   levelFromExperience,
   mintCharacterIx,
   OPEN_MINT_MODAL_EVENT,
-  TOKEN_METADATA_PROGRAM_ID
+  TOKEN_METADATA_PROGRAM_ID,
+  type Gender
 } from '@/lib'
 import { type CharacterWithMetadata, fetchCharacterMetadata, fetchCharactersForAuthority } from '@/lib/characters'
 
@@ -83,7 +84,7 @@ const CIV_LORE: Record<(typeof CIVS)[number], { summary: string; classes: string
   }
 }
 
-const CivSelect = chakra('select')
+const StyledSelect = chakra('select')
 
 const deriveMetadataPda = (mint: PublicKey) =>
   PublicKey.findProgramAddressSync(
@@ -140,6 +141,7 @@ export function PlayContent() {
   const [loadingCharacters, setLoadingCharacters] = useState(false)
   const [carouselIndex, setCarouselIndex] = useState(0)
   const [civilization, setCivilization] = useState<(typeof CIVS)[number]>('Ard')
+  const [gender, setGender] = useState<Gender>('Male')
   const [status, setStatus] = useState<Status>({ state: 'idle' })
   const [showMintModal, setShowMintModal] = useState(false)
   const hasCharacters = characters.length > 0
@@ -208,7 +210,7 @@ export function PlayContent() {
       const masterEdition = deriveMasterEditionPda(characterMint)
 
       const mintIx = mintCharacterIx(
-        { civilization: civIndex, characterId: nextId, gender: 'Male' },
+        { civilization: civIndex, characterId: nextId, gender },
         {
           character: characterAccount,
           authority: publicKey,
@@ -258,6 +260,7 @@ export function PlayContent() {
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
 
       setStatus({ state: 'success', signature: sig })
+      setShowMintModal(false)
       if (publicKey) {
         void loadCharacters(publicKey.toBase58())
       }
@@ -265,7 +268,7 @@ export function PlayContent() {
       const message = error instanceof Error ? error.message : 'Unknown error'
       setStatus({ state: 'error', message })
     }
-  }, [connected, civilization, connection, publicKey, setVisible, signTransaction, loadCharacters])
+  }, [connected, civilization, connection, gender, publicKey, setVisible, signTransaction, loadCharacters])
 
   useEffect(() => {
     const handleOpenMint = () => {
@@ -316,42 +319,89 @@ export function PlayContent() {
           </Box>
         ))}
       </Stack>
-      <Box position="relative" width="full" maxW="260px">
-        <CivSelect
-          bg="rgba(255,255,255,0.04)"
-          borderColor="rgba(255,255,255,0.08)"
-          color="white"
-          value={civilization}
-          onChange={(event) => setCivilization(event.target.value as (typeof CIVS)[number])}
-          width="full"
-          paddingX={3}
-          paddingY={2}
-          borderRadius="xl"
-          cursor="pointer"
-          pr={10}
-          appearance="none"
-        >
-          {CIVS.map((civ) => (
-            <option key={civ} value={civ}>
-              {civ}
-            </option>
-          ))}
-        </CivSelect>
-        <Box
-          aria-hidden
-          pointerEvents="none"
-          position="absolute"
-          right={3}
-          top="50%"
-          transform="translateY(-50%)"
-          color="whiteAlpha.800"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
-            <title>ChevronDown</title>
-            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+      <Stack direction={{ base: 'column', sm: 'row' }} gap={3} width="full">
+        <Box position="relative" width="full" maxW="260px">
+          <StyledSelect
+            bg="rgba(255,255,255,0.04)"
+            borderColor="rgba(255,255,255,0.08)"
+            color="white"
+            value={civilization}
+            onChange={(event) => setCivilization(event.target.value as (typeof CIVS)[number])}
+            width="full"
+            paddingX={3}
+            paddingY={2}
+            borderRadius="xl"
+            cursor="pointer"
+            pr={10}
+            appearance="none"
+          >
+            {CIVS.map((civ) => (
+              <option key={civ} value={civ}>
+                {civ}
+              </option>
+            ))}
+          </StyledSelect>
+          <Box
+            aria-hidden
+            pointerEvents="none"
+            position="absolute"
+            right={3}
+            top="50%"
+            transform="translateY(-50%)"
+            color="whiteAlpha.800"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+              <title>ChevronDown</title>
+              <path
+                d="M6 9l6 6 6-6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Box>
         </Box>
-      </Box>
+        <Box position="relative" width="full" maxW="260px">
+          <StyledSelect
+            bg="rgba(255,255,255,0.04)"
+            borderColor="rgba(255,255,255,0.08)"
+            color="white"
+            value={gender}
+            onChange={(event) => setGender(event.target.value === 'Female' ? 'Female' : 'Male')}
+            width="full"
+            paddingX={3}
+            paddingY={2}
+            borderRadius="xl"
+            cursor="pointer"
+            pr={10}
+            appearance="none"
+          >
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </StyledSelect>
+          <Box
+            aria-hidden
+            pointerEvents="none"
+            position="absolute"
+            right={3}
+            top="50%"
+            transform="translateY(-50%)"
+            color="whiteAlpha.800"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+              <title>ChevronDown</title>
+              <path
+                d="M6 9l6 6 6-6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Box>
+        </Box>
+      </Stack>
       <Stack direction={{ base: 'column', sm: 'row' }} gap={3} width="full">
         <Button
           background="custom-blue"
