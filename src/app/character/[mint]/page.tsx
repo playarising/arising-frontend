@@ -1,6 +1,6 @@
 import { Accordion, Box, Button, Grid, GridItem, Progress, Stack, Text } from '@chakra-ui/react'
 import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
-import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js'
+import { Connection, clusterApiUrl, PublicKey } from '@solana/web3.js'
 import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
@@ -11,8 +11,8 @@ import {
   fetchCodex,
   levelFromExperience
 } from '@/lib'
-import { EnergyStatus } from './EnergyStatus'
 import { ActionsSwitcher } from './ActionsSwitcher'
+import { EnergyStatus } from './EnergyStatus'
 
 type Params = Promise<{ mint: string }>
 
@@ -136,28 +136,31 @@ export default async function CharacterPage({ params }: { params: Params }) {
   const questProgress = resolveProgress(resolvedQuestState)
   const recipeProgress = resolveProgress(resolvedRecipeState)
 
-  const _availableEquipments = codex.equipments
-    .filter((item) => (item.levelRequired ?? 0) <= characterLevel)
-    .sort((a, b) => a.levelRequired - b.levelRequired || a.idx - b.idx)
-  const _availableQuests = codex.quests
+  const availableQuests = codex.quests
     .filter((item) => (item.levelRequired ?? 0) <= characterLevel)
     .sort((a, b) => a.levelRequired - b.levelRequired || a.id - b.id)
-  const _availableRecipes = codex.recipes
+  const availableRecipes = codex.recipes
     .filter((item) => (item.levelRequired ?? 0) <= characterLevel)
     .sort((a, b) => a.levelRequired - b.levelRequired || a.id - b.id)
 
-  const questsForClient = _availableQuests.map((q) => ({
+  const questsForClient = availableQuests.map((q) => ({
     id: q.id,
     name: q.displayName,
     levelRequired: q.levelRequired,
     energyCost: q.baseEnergyCost,
-    type: q.questType
+    type: q.questType,
+    rewards: q.rewards,
+    requirements: q.minimumStats
   }))
-  const recipesForClient = _availableRecipes.map((r) => ({
+
+  const recipesForClient = availableRecipes.map((r) => ({
     id: r.id,
     name: r.displayName,
     levelRequired: r.levelRequired,
-    type: r.recipeType
+    type: r.recipeType,
+    energyCost: r.baseEnergyCost,
+    input: r.input,
+    output: r.output
   }))
 
   const resourceMintMap = new Map(
@@ -659,155 +662,7 @@ export default async function CharacterPage({ params }: { params: Params }) {
             width="full"
             gap={4}
           >
-            <Stack direction="row" align="center" justify="space-between">
-              <Box as="button" aria-label="Previous view" background="transparent" _hover={{ opacity: 0.7 }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
-                  <path
-                    d="M15 6l-6 6 6 6"
-                    stroke="white"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Box>
-              <Stack direction="row" align="center" gap={3} color="white" fontWeight="700" fontSize="md">
-                <Text>Quests</Text>
-                <Text color="gray.500">|</Text>
-                <Text>Craft</Text>
-              </Stack>
-              <Box as="button" aria-label="Next view" background="transparent" _hover={{ opacity: 0.7 }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
-                  <path
-                    d="M9 6l6 6-6 6"
-                    stroke="white"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Box>
-            </Stack>
-
-            <Stack gap={3}>
-              <Text color="white" fontWeight="700" fontSize="md">
-                Quests you can start
-              </Text>
-              {_availableQuests.length ? (
-                <Stack gap={2}>
-                  {_availableQuests.map((quest) => (
-                    <Box
-                      key={quest.id}
-                      border="1px solid rgba(255,255,255,0.1)"
-                      borderRadius="md"
-                      padding={3}
-                      bg="rgba(255,255,255,0.02)"
-                    >
-                      <Text color="white" fontWeight="700">
-                        {quest.displayName}
-                      </Text>
-                      <Text color="gray.400" fontSize="sm">
-                        Req. Level {quest.levelRequired} · {quest.baseEnergyCost} energy · {quest.questType}
-                      </Text>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <Text color="gray.500" fontSize="sm">
-                  No quests unlocked yet.
-                </Text>
-              )}
-            </Stack>
-
-            <Stack gap={3}>
-              <Text color="white" fontWeight="700" fontSize="md">
-                Equipment you can equip
-              </Text>
-              {_availableEquipments.length ? (
-                <Stack gap={2}>
-                  {_availableEquipments.map((item) => (
-                    <Box
-                      key={item.idx}
-                      border="1px solid rgba(255,255,255,0.1)"
-                      borderRadius="md"
-                      padding={3}
-                      bg="rgba(255,255,255,0.02)"
-                    >
-                      <Text color="white" fontWeight="700">
-                        {item.displayName}
-                      </Text>
-                      <Text color="gray.400" fontSize="sm">
-                        Req. Level {item.levelRequired} · {item.category}
-                      </Text>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <Text color="gray.500" fontSize="sm">
-                  No equipment unlocked yet.
-                </Text>
-              )}
-            </Stack>
-
-            <Stack gap={3}>
-              <Text color="white" fontWeight="700" fontSize="md">
-                Recipes you can craft
-              </Text>
-              {_availableRecipes.length ? (
-                <Stack gap={2}>
-                  {_availableRecipes.map((recipe) => (
-                    <Box
-                      key={recipe.id}
-                      border="1px solid rgba(255,255,255,0.1)"
-                      borderRadius="md"
-                      padding={3}
-                      bg="rgba(255,255,255,0.02)"
-                    >
-                      <Text color="white" fontWeight="700">
-                        {recipe.displayName}
-                      </Text>
-                      <Text color="gray.400" fontSize="sm">
-                        Req. Level {recipe.levelRequired} · {recipe.recipeType}
-                      </Text>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <Text color="gray.500" fontSize="sm">
-                  No recipes unlocked yet.
-                </Text>
-              )}
-            </Stack>
-
-            <Stack gap={3}>
-              <Text color="white" fontWeight="700" fontSize="md">
-                Resource mints
-              </Text>
-              {codex.resourceMints.length ? (
-                <Stack gap={2}>
-                  {codex.resourceMints.map((resource) => (
-                    <Box
-                      key={resource.resourceId}
-                      border="1px solid rgba(255,255,255,0.1)"
-                      borderRadius="md"
-                      padding={3}
-                      bg="rgba(255,255,255,0.02)"
-                    >
-                      <Text color="white" fontWeight="700">
-                        {resource.displayName}
-                      </Text>
-                      <Text color="gray.400" fontSize="sm">
-                        Resource: {resource.resource} · Mint: {resource.mint}
-                      </Text>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <Text color="gray.500" fontSize="sm">
-                  No resource mints found.
-                </Text>
-              )}
-            </Stack>
+            <ActionsSwitcher quests={questsForClient} recipes={recipesForClient} />
           </Stack>
         </GridItem>
       </Grid>

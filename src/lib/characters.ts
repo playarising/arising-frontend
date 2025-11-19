@@ -50,8 +50,8 @@ export type CodexQuest = {
   levelRequired: number
   cooldownSeconds: number
   baseEnergyCost: number
-  minimumStats: unknown
-  rewards: unknown
+  minimumStats?: Record<string, number>
+  rewards?: unknown
   raw: unknown
 }
 
@@ -63,9 +63,9 @@ export type CodexRecipe = {
   levelRequired: number
   cooldownSeconds: number
   baseEnergyCost: number
-  minimumStats: unknown
-  input: unknown
-  output: unknown
+  minimumStats?: Record<string, number>
+  input?: unknown
+  output?: unknown
   raw: unknown
 }
 
@@ -285,31 +285,19 @@ const CHARACTER_BY_MINT_QUERY = `
 
 const CODEX_QUERY = `
   query CodexData {
-    allCodexEquipments {
-      nodes {
-        idx
-        displayName
-        category
-        allowedSlots
-        occupiesBothHands
-        occupiesForearm
-        levelRequired
-        attributeBonus
-        raw
-      }
-    }
     allCodexQuests {
       nodes {
-        id
-        questType
-        name
-        displayName
-        levelRequired
-        cooldownSeconds
         baseEnergyCost
+        cooldownSeconds
+        displayName
+        id
+        levelRequired
         minimumStats
+        name
+        questType
+        nodeId
         rewards
-        raw
+        updatedAt
       }
     }
     allCodexRecipes {
@@ -329,11 +317,11 @@ const CODEX_QUERY = `
     }
     allCodexResourceMints {
       nodes {
-        resourceId
-        resource
         displayName
         mint
-        raw
+        resource
+        resourceId
+        updatedAt
       }
     }
   }
@@ -397,6 +385,18 @@ export async function fetchCharacterByMint(mint: string): Promise<CharacterRecor
   return node ?? null
 }
 
+const parseJson = <T>(value: unknown): T | undefined => {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T
+    } catch {
+      return undefined
+    }
+  }
+  if (value && typeof value === 'object') return value as T
+  return undefined
+}
+
 export async function fetchCodex(): Promise<{
   equipments: CodexEquipment[]
   quests: CodexQuest[]
@@ -420,8 +420,17 @@ export async function fetchCodex(): Promise<{
 
   return {
     equipments: (json?.data?.allCodexEquipments?.nodes ?? []) as CodexEquipment[],
-    quests: (json?.data?.allCodexQuests?.nodes ?? []) as CodexQuest[],
-    recipes: (json?.data?.allCodexRecipes?.nodes ?? []) as CodexRecipe[],
+    quests: (json?.data?.allCodexQuests?.nodes ?? []).map((node: CodexQuest) => ({
+      ...node,
+      minimumStats: parseJson<Record<string, number>>(node.minimumStats),
+      rewards: parseJson<unknown>(node.rewards) ?? node.rewards
+    })),
+    recipes: (json?.data?.allCodexRecipes?.nodes ?? []).map((node: CodexRecipe) => ({
+      ...node,
+      minimumStats: parseJson<Record<string, number>>(node.minimumStats),
+      input: parseJson<unknown>(node.input) ?? node.input,
+      output: parseJson<unknown>(node.output) ?? node.output
+    })),
     resourceMints: (json?.data?.allCodexResourceMints?.nodes ?? []) as CodexResourceMint[]
   }
 }

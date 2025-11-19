@@ -482,7 +482,7 @@ export function PlayContent() {
               variant="ghost"
               color="white"
               onClick={() => changeIndex('prev')}
-              isDisabled={!multipleCharacters}
+              disabled={!multipleCharacters}
               alignSelf="center"
               display="flex"
               alignItems="center"
@@ -676,7 +676,7 @@ export function PlayContent() {
               variant="ghost"
               color="white"
               onClick={() => changeIndex('next')}
-              isDisabled={!multipleCharacters}
+              disabled={!multipleCharacters}
               aria-label="Next character"
               alignSelf="center"
               display="flex"
