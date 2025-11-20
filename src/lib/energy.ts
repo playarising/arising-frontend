@@ -91,8 +91,18 @@ const computeStatsPressure = (required: Record<CoreStatKey, number>) => {
   return clamp(total / 12, 1, 1.35)
 }
 
-const resolveBaseEnergy = (baseEnergyCost: number, levelRequired: number) =>
-  Math.max(baseEnergyCost, 5 + Math.floor(levelRequired / 12), 1)
+// Energy floor constants matching Rust implementation
+const MINIMUM_ENERGY_COST = 1
+const ENERGY_LEVEL_BASE = 5
+const ENERGY_LEVEL_DIVISOR = 12
+
+const resolveBaseEnergy = (baseEnergyCost: number, levelRequired: number, bypassStatFloors?: boolean) => {
+  const floor = bypassStatFloors
+    ? MINIMUM_ENERGY_COST
+    : ENERGY_LEVEL_BASE + Math.floor(levelRequired / ENERGY_LEVEL_DIVISOR)
+
+  return Math.max(baseEnergyCost, floor, MINIMUM_ENERGY_COST)
+}
 
 const finalizeEnergy = (
   baseEnergy: number,
@@ -104,12 +114,12 @@ const finalizeEnergy = (
 ) => Math.max(1, Math.ceil(baseEnergy * statModifier * lowLevelPenalty * cooldownPressure * rewardOrOutputPressure * statsPressure))
 
 export const calculateQuestEnergyCost = (
-  quest: Pick<CodexQuest, 'baseEnergyCost' | 'levelRequired' | 'cooldownSeconds' | 'minimumStats' | 'rewards'>,
+  quest: Pick<CodexQuest, 'baseEnergyCost' | 'levelRequired' | 'cooldownSeconds' | 'minimumStats' | 'rewards' | 'bypassStatFloors'>,
   characterLevel: number,
   characterStats: CoreStats
 ) => {
   const levelRequired = toNumber(quest.levelRequired, 1)
-  const baseEnergy = resolveBaseEnergy(toNumber(quest.baseEnergyCost, 1), levelRequired)
+  const baseEnergy = resolveBaseEnergy(toNumber(quest.baseEnergyCost, 1), levelRequired, quest.bypassStatFloors)
   const requiredStats = normalizeStats(quest.minimumStats)
   const stats = normalizeStats(characterStats)
   const efficiencyFloor = computeEfficiencyFloor(levelRequired, characterLevel)

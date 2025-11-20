@@ -20,7 +20,7 @@ import {
   TOKEN_METADATA_PROGRAM_ID,
   type Gender
 } from '@/lib'
-import { type CharacterWithMetadata, fetchCharacterMetadata, fetchCharactersForAuthority } from '@/lib/characters'
+import { type CharacterWithMetadata, fetchCharacterMetadata, fetchCharactersForAuthority } from '@/lib'
 
 type Status =
   | { state: 'idle' }
@@ -506,17 +506,21 @@ export function PlayContent() {
             {characters[carouselIndex] &&
               (() => {
                 const selected = characters[carouselIndex]
-                const levelFromXp =
-                  selected.experience !== undefined && selected.experience !== null
-                    ? levelFromExperience(selected.experience)
-                    : undefined
+                const rawExperience =
+                  typeof selected.experience === 'string'
+                    ? Number.parseInt(selected.experience, 10)
+                    : typeof selected.experience === 'number'
+                      ? selected.experience
+                      : null
+                const hasExperienceData = rawExperience !== null && Number.isFinite(rawExperience)
+                const levelFromXp = hasExperienceData ? levelFromExperience(rawExperience) : undefined
                 const levelFromMetadata = selected.metadata?.attributes?.find(
                   (attr) => attr.trait_type === 'Level'
                 )?.value
                 const levelFromMetadataNumber =
                   typeof levelFromMetadata === 'number' ? levelFromMetadata : Number(levelFromMetadata ?? NaN)
                 const resolvedLevelNumber =
-                  Number.isFinite(levelFromXp) && levelFromXp
+                  levelFromXp !== undefined
                     ? levelFromXp
                     : Number.isFinite(levelFromMetadataNumber)
                       ? levelFromMetadataNumber
@@ -542,8 +546,8 @@ export function PlayContent() {
                 }
                 const statsEntries = parsedStats
                   ? (Object.entries(parsedStats).filter(([, value]) => typeof value === 'number') as Array<
-                      [string, number]
-                    >)
+                    [string, number]
+                  >)
                   : []
 
                 const variants = {

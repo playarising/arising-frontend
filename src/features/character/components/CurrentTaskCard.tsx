@@ -3,7 +3,7 @@
 import { Box, Button, Flex, Progress, Stack, Text } from '@chakra-ui/react'
 import type { JSX } from 'react'
 import { ModuleLoader } from './ModuleLoader'
-import { formatDuration, type ProgressState } from '../utils/taskUtils'
+import { formatDuration, type ProgressState } from '@/features'
 
 type CurrentTaskCardProps = {
   titleLines: string[]
@@ -30,15 +30,15 @@ export const CurrentTaskCard = ({
       <Stack gap={0.5}>
         {titleLines.length
           ? titleLines.map((part, idx) => (
-              <Text key={idx} color="gray.300" fontSize="sm">
-                {part}
-              </Text>
-            ))
+            <Text key={idx} color="gray.300" fontSize="sm">
+              {part}
+            </Text>
+          ))
           : (
-              <Text color="gray.300" fontSize="sm">
-                Task
-              </Text>
-            )}
+            <Text color="gray.300" fontSize="sm">
+              Task
+            </Text>
+          )}
       </Stack>
 
       <Box>

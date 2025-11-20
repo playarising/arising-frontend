@@ -9,9 +9,9 @@ import {
   calculateAttributePointAvailability,
   calculateCorePointAvailability,
   resolveCivilizationIndex
-} from '../utils/progression'
-import { allocateAttributesIx, allocateCoreStatsIx, findCharacterPda } from '@/lib/arising'
-import type { AttributesInput, CoreStatsInput } from '@/lib/arising'
+} from '@/features'
+import { allocateAttributesIx, allocateCoreStatsIx, findCharacterPda } from '@/lib'
+import type { AttributesInput, CoreStatsInput } from '@/lib'
 import { ModuleLoader } from './ModuleLoader'
 
 const CORE_KEYS = ['might', 'speed', 'intellect'] as const
@@ -118,13 +118,13 @@ export function StatAllocationList({
       const ix =
         type === 'core'
           ? allocateCoreStatsIx(
-              { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationCore },
-              { character: characterPda, authority: publicKey }
-            )
+            { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationCore },
+            { character: characterPda, authority: publicKey }
+          )
           : allocateAttributesIx(
-              { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationAttr },
-              { character: characterPda, authority: publicKey }
-            )
+            { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationAttr },
+            { character: characterPda, authority: publicKey }
+          )
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
       const computeIxs = [
@@ -150,87 +150,87 @@ export function StatAllocationList({
       <ModuleLoader loading={submitting} label="Allocating points..." />
       <Stack gap={2} width="full">
         {keys.map((key) => {
-        const pendingValue = pending[key] ?? 0
-        const showIncrement = remainingAvailable > 0
-        const showDecrement = pendingValue > 0
-        return (
-          <Flex
-            key={key}
-            align="center"
-            justify="space-between"
-            paddingY={1}
-            gap={3}
-            flexWrap="wrap"
-          >
-            <Text color="white" fontWeight="700">
-              {LABEL_MAP[key] ?? key}
-            </Text>
-            <Flex align="center" gap={2}>
-              <Text color="gray.200" minW="32px" textAlign="right">
-                {formatValue(key)}
+          const pendingValue = pending[key] ?? 0
+          const showIncrement = remainingAvailable > 0
+          const showDecrement = pendingValue > 0
+          return (
+            <Flex
+              key={key}
+              align="center"
+              justify="space-between"
+              paddingY={1}
+              gap={3}
+              flexWrap="wrap"
+            >
+              <Text color="white" fontWeight="700">
+                {LABEL_MAP[key] ?? key}
               </Text>
-              <Flex align="center" gap={1}>
-                {showDecrement ? (
-                  <Box
-                    as="button"
-                    aria-label={`Remove ${LABEL_MAP[key] ?? key}`}
-                    border="1px solid rgba(255,255,255,0.35)"
-                    borderRadius="full"
-                    width="26px"
-                    height="26px"
-                    display="grid"
-                    placeItems="center"
-                    color="white"
-                    background="rgba(255,255,255,0.08)"
-                    _hover={{ bg: 'white', color: 'black' }}
-                    onClick={() => decrement(key)}
-                  >
-                    −
-                  </Box>
-                ) : null}
-                {showIncrement ? (
-                  <Box
-                    as="button"
-                    aria-label={`Increase ${LABEL_MAP[key] ?? key}`}
-                    border="1px solid rgba(255,255,255,0.35)"
-                    borderRadius="full"
-                    width="26px"
-                    height="26px"
-                    display="grid"
-                    placeItems="center"
-                    color="white"
-                    background="rgba(255,255,255,0.08)"
-                    _hover={{ bg: 'white', color: 'black' }}
-                    cursor="pointer"
-                    onClick={() => increment(key)}
-                  >
-                    +
-                  </Box>
-                ) : null}
+              <Flex align="center" gap={2}>
+                <Text color="gray.200" minW="32px" textAlign="right">
+                  {formatValue(key)}
+                </Text>
+                <Flex align="center" gap={1}>
+                  {showDecrement ? (
+                    <Box
+                      as="button"
+                      aria-label={`Remove ${LABEL_MAP[key] ?? key}`}
+                      border="1px solid rgba(255,255,255,0.35)"
+                      borderRadius="full"
+                      width="26px"
+                      height="26px"
+                      display="grid"
+                      placeItems="center"
+                      color="white"
+                      background="rgba(255,255,255,0.08)"
+                      _hover={{ bg: 'white', color: 'black' }}
+                      onClick={() => decrement(key)}
+                    >
+                      −
+                    </Box>
+                  ) : null}
+                  {showIncrement ? (
+                    <Box
+                      as="button"
+                      aria-label={`Increase ${LABEL_MAP[key] ?? key}`}
+                      border="1px solid rgba(255,255,255,0.35)"
+                      borderRadius="full"
+                      width="26px"
+                      height="26px"
+                      display="grid"
+                      placeItems="center"
+                      color="white"
+                      background="rgba(255,255,255,0.08)"
+                      _hover={{ bg: 'white', color: 'black' }}
+                      cursor="pointer"
+                      onClick={() => increment(key)}
+                    >
+                      +
+                    </Box>
+                  ) : null}
+                </Flex>
               </Flex>
             </Flex>
-          </Flex>
-        )
-      })}
-      <Stack gap={1} align="center" width="full">
-        {remainingAvailable > 0 ? (
-          <Text color="white" fontWeight="700" fontSize="sm">
-            {remainingAvailable} points available
-          </Text>
-        ) : null}
-        <Button
-          size="sm"
-          background="custom-blue"
-          color="black"
-          fontWeight="700"
-          _hover={{ bg: 'white', color: 'black' }}
-          disabled={pendingTotal === 0 || submitting || !publicKey || !signTransaction}
-          width="full"
-          onClick={handleSpend}
-        >
-          {submitting ? 'Submitting...' : 'Spend points'}
-        </Button>
-      </Stack>
+          )
+        })}
+        <Stack gap={1} align="center" width="full">
+          {remainingAvailable > 0 ? (
+            <Text color="white" fontWeight="700" fontSize="sm">
+              {remainingAvailable} points available
+            </Text>
+          ) : null}
+          <Button
+            size="sm"
+            background="custom-blue"
+            color="black"
+            fontWeight="700"
+            _hover={{ bg: 'white', color: 'black' }}
+            disabled={pendingTotal === 0 || submitting || !publicKey || !signTransaction}
+            width="full"
+            onClick={handleSpend}
+          >
+            {submitting ? 'Submitting...' : 'Spend points'}
+          </Button>
+        </Stack>
       </Stack>
     </Box>
   )

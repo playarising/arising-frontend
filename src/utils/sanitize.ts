@@ -4,7 +4,7 @@ const sanitizeName = (name: string) =>
     .replace(/^./, (str) => str.toUpperCase())
     .trim()
 
-const sanitizeRewards = (value: unknown) => {
+export const sanitizeRewards = (value: unknown) => {
   if (Array.isArray(value)) {
     return value.map((item) => {
       if (typeof item === 'string') return sanitizeName(item)

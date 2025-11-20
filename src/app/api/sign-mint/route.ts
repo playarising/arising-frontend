@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // Program gatekeeping: only sign mint_character calls for this program.
-const ARISING_PROGRAM_ID = new PublicKey('arisFmS4ovGjBoxAwfuPX3iJaAvW2KtBAver3uknfMp')
+const ARISING_PROGRAM_ID = new PublicKey('arisrYLSKUei59PvwWzxtgkNTypLNKmd3u3jHeNQAn9')
 const MINT_CHARACTER_DISCRIMINATOR = Buffer.from([127, 29, 52, 229, 72, 194, 255, 67]) // from arising IDL
 
 const secretKey = (() => {

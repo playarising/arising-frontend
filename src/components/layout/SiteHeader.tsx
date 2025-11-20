@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { dispatchOpenMintModal, fetchCharactersForAuthority } from '@/lib'
-import { AppLink } from '../navigation'
+import { AppLink } from '@/components/navigation'
 
 export function SiteHeader() {
   const { connected, disconnect, publicKey, signMessage } = useWallet()

@@ -6,11 +6,11 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { claimQuestIx, claimRecipeIx, findCharacterPda } from '@/lib/arising'
-import type { CodexQuest, CodexRecipe, CodexResourceMint } from '@/lib/characters'
+import { claimQuestIx, claimRecipeIx, findCharacterPda } from '@/lib'
+import type { CodexQuest, CodexRecipe, CodexResourceMint } from '@/lib'
 import { CurrentTaskCard } from './CurrentTaskCard'
 import { RewardBadges, ResourceBadges } from './TaskBadges'
-import { resolveProgress, sanitizeName, splitTitle } from '../utils/taskUtils'
+import { resolveProgress, sanitizeName, splitTitle } from '@/features'
 
 type QuestState = {
   quest_id?: number

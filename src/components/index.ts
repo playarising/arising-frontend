@@ -1,4 +1,5 @@
 export * from './layout'
 export * from './navigation'
 export * from './seo'
-export * from './ui'
+export * from './common'
+export * from './LandingPage'

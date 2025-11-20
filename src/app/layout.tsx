@@ -1,4 +1,4 @@
-import { ClientOnly } from '@chakra-ui/react'
+import { Box, ClientOnly } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Cinzel, Montserrat } from 'next/font/google'
@@ -39,9 +39,9 @@ export const metadata: Metadata = {
   creator: 'Grupo Kindynos',
   publisher: 'Grupo Kindynos',
   alternates: {
-    canonical: '/',
+    canonical: SITE_URL,
     languages: {
-      'en-US': '/'
+      'en-US': SITE_URL
     }
   },
   icons: {
@@ -119,10 +119,10 @@ export default function RootLayout({
         <TopLoader />
         <ClientOnly>
           <Providers>
-            <main style={{ position: 'relative', overflowX: 'hidden' }}>
+            <Box as="main" position="relative" overflowX="hidden">
               <SiteHeader />
               {children}
-            </main>
+            </Box>
           </Providers>
         </ClientOnly>
       </body>

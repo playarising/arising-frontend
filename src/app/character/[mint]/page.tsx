@@ -11,16 +11,57 @@ import {
   calculateRecipeEnergyCost,
   fetchCharacterMetadata,
   fetchCharactersForAuthority,
+  fetchCharacterByMint,
   fetchCodex,
   levelFromExperience
 } from '@/lib'
-import { ActionsSwitcher, CurrentTasks, EnergyStatus, StatAllocationList } from '@/features/character/components'
+import { ActionsSwitcher, CurrentTasks, EnergyStatus, StatAllocationList } from '@/features'
 import {
   calculateAttributePointAvailability,
   calculateCorePointAvailability
-} from '@/features/character/utils/progression'
+} from '@/features'
+
+import { Metadata } from 'next'
 
 type Params = Promise<{ mint: string }>
+
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const { mint } = await params
+
+  // We need to fetch the character to get its details
+  // Since we don't have the authority here easily without session, we might need a direct fetch by mint
+  // Assuming fetchCharacterByMint exists or we can use fetchCharactersForAuthority if we had the owner.
+  // But for SEO, we want public data. 
+  // Let's check if we can fetch by mint directly.
+  // Based on previous analysis, there is a fetchCharacterByMint in lib/characters.ts
+
+  const { fetchCharacterByMint } = await import('@/lib')
+  const character = await fetchCharacterByMint(mint)
+
+  if (!character) {
+    return {
+      title: 'Character Not Found | Arising',
+      description: 'The requested character could not be found.'
+    }
+  }
+
+  const { fetchCharacterMetadata } = await import('@/lib')
+  const metadata = await fetchCharacterMetadata(character.civilization, character.civilizationCharacterId).catch(() => undefined)
+
+  const name = metadata?.name ?? `Character ${mint.slice(0, 8)}`
+  const level = metadata?.attributes?.find(a => a.trait_type === 'Level')?.value ?? 'Unknown'
+  const civ = character.civilization
+
+  return {
+    title: `${name} | Arising`,
+    description: `Level ${level} ${civ} Character in Arising. View their stats, equipment, and progress.`,
+    openGraph: {
+      title: `${name} | Arising`,
+      description: `Level ${level} ${civ} Character in Arising.`,
+      images: metadata?.image ? [{ url: metadata.image }] : []
+    }
+  }
+}
 
 export default async function CharacterPage({ params }: { params: Params }) {
   const { mint } = await params
@@ -489,7 +530,7 @@ export default async function CharacterPage({ params }: { params: Params }) {
               characterLevel={characterLevel}
               characterEnergy={parsedEnergy}
               characterStats={Object.fromEntries(parsedStatsEntries)}
-              inventory={inventoryBalances}
+              initialInventory={inventoryBalances}
               civilization={character.civilization}
               civilizationCharacterId={character.civilizationCharacterId}
               currentQuest={resolvedQuestState}

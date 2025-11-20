@@ -76,6 +76,7 @@ export type CodexQuest = {
   minimumStats?: Record<string, number>
   rewards?: QuestReward[]
   energyCostCalculation?: QuestEnergyCostCalculation
+  bypassStatFloors?: boolean
   raw: Record<string, string | number | boolean | object>
 }
 
@@ -331,50 +332,6 @@ const CHARACTER_BY_MINT_QUERY = `
   }
 `
 
-const CODEX_QUERY = `
-  query CodexData {
-    allCodexQuests {
-      nodes {
-        baseEnergyCost
-        cooldownSeconds
-        displayName
-        energyCostCalculation
-        id
-        levelRequired
-        minimumStats
-        name
-        questType
-        nodeId
-        rewards
-        updatedAt
-      }
-    }
-    allCodexRecipes {
-      nodes {
-        id
-        recipeType
-        name
-        displayName
-        levelRequired
-        cooldownSeconds
-        baseEnergyCost
-        minimumStats
-        input
-        output
-        raw
-      }
-    }
-    allCodexResourceMints {
-      nodes {
-        displayName
-        mint
-        resource
-        resourceId
-        updatedAt
-      }
-    }
-  }
-`
 
 export async function fetchCharactersForAuthority(authority: string): Promise<CharacterRecord[]> {
   const res = await fetch(INDEXER_ENDPOINT, {
@@ -399,11 +356,11 @@ export async function fetchCharacterMetadata(
   civilizationCharacterId: number
 ): Promise<
   | {
-      name?: string
-      image?: string
-      description?: string
-      attributes?: { trait_type?: string; value?: string | number }[]
-    }
+    name?: string
+    image?: string
+    description?: string
+    attributes?: { trait_type?: string; value?: string | number }[]
+  }
   | undefined
 > {
   const slug = civilization.toLowerCase()
@@ -430,8 +387,8 @@ export async function fetchCharacterByMint(mint: string): Promise<CharacterRecor
   if (json?.errors) {
     console.error('Indexer GraphQL errors', json.errors)
   }
-  const node = json?.data?.characterByNftMint as CharacterRecord | null | undefined
-  return node ?? null
+  const character = json?.data?.characterByNftMint as CharacterRecord | null | undefined
+  return character ?? null
 }
 
 const parseJson = <T>(value: string | object | null | undefined): T | undefined => {
@@ -446,42 +403,123 @@ const parseJson = <T>(value: string | object | null | undefined): T | undefined 
   return undefined
 }
 
+// Split codex queries for parallel fetching
+const CODEX_QUESTS_QUERY = `
+  query CodexQuests {
+    allCodexQuests {
+      nodes {
+        baseEnergyCost
+        cooldownSeconds
+        displayName
+        energyCostCalculation
+        id
+        levelRequired
+        minimumStats
+        name
+        questType
+        nodeId
+        rewards
+        bypassStatFloors
+        updatedAt
+      }
+    }
+  }
+`
+
+const CODEX_RECIPES_QUERY = `
+  query CodexRecipes {
+    allCodexRecipes {
+      nodes {
+        id
+        recipeType
+        name
+        displayName
+        levelRequired
+        cooldownSeconds
+        baseEnergyCost
+        minimumStats
+        input
+        output
+        raw
+      }
+    }
+  }
+`
+
+const CODEX_RESOURCE_MINTS_QUERY = `
+  query CodexResourceMints {
+    allCodexResourceMints {
+      nodes {
+        displayName
+        mint
+        resource
+        resourceId
+        updatedAt
+      }
+    }
+  }
+`
+
 export async function fetchCodex(): Promise<{
   equipments: CodexEquipment[]
   quests: CodexQuest[]
   recipes: CodexRecipe[]
   resourceMints: CodexResourceMint[]
 }> {
-  const res = await fetch(INDEXER_ENDPOINT, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query: CODEX_QUERY })
-  })
+  // Fetch all codex data in parallel for better performance
+  const [questsRes, recipesRes, resourceMintsRes] = await Promise.all([
+    fetch(INDEXER_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: CODEX_QUESTS_QUERY })
+    }),
+    fetch(INDEXER_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: CODEX_RECIPES_QUERY })
+    }),
+    fetch(INDEXER_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: CODEX_RESOURCE_MINTS_QUERY })
+    })
+  ])
 
-  if (!res.ok) {
-    throw new Error(`Indexer error: ${res.status}`)
+  if (!questsRes.ok) {
+    throw new Error(`Indexer error fetching quests: ${questsRes.status} ${questsRes.statusText}`)
+  }
+  if (!recipesRes.ok) {
+    throw new Error(`Indexer error fetching recipes: ${recipesRes.status} ${recipesRes.statusText}`)
+  }
+  if (!resourceMintsRes.ok) {
+    throw new Error(`Indexer error fetching resource mints: ${resourceMintsRes.status} ${resourceMintsRes.statusText}`)
   }
 
-  const json = await res.json()
-  if (json?.errors) {
-    console.error('Indexer GraphQL errors', json.errors)
-  }
+  const [questsJson, recipesJson, resourceMintsJson] = await Promise.all([
+    questsRes.json(),
+    recipesRes.json(),
+    resourceMintsRes.json()
+  ])
+
+  if (questsJson?.errors) console.error('Indexer GraphQL errors (quests)', questsJson.errors)
+  if (recipesJson?.errors) console.error('Indexer GraphQL errors (recipes)', recipesJson.errors)
+  if (resourceMintsJson?.errors) console.error('Indexer GraphQL errors (resourceMints)', resourceMintsJson.errors)
 
   return {
-    equipments: (json?.data?.allCodexEquipments?.nodes ?? []) as CodexEquipment[],
-    quests: (json?.data?.allCodexQuests?.nodes ?? []).map((node: CodexQuest) => ({
+    equipments: [], // No equipment data in current queries
+    quests: (questsJson?.data?.allCodexQuests?.nodes ?? []).map((node: CodexQuest) => ({
       ...node,
       minimumStats: parseJson<Record<string, number>>(node.minimumStats),
       rewards: parseJson<QuestReward[]>(node.rewards) ?? (Array.isArray(node.rewards) ? node.rewards : []),
       energyCostCalculation:
         parseJson<QuestEnergyCostCalculation>(node.energyCostCalculation) ?? node.energyCostCalculation
     })),
-    recipes: (json?.data?.allCodexRecipes?.nodes ?? []).map((node: CodexRecipe) => ({
+    recipes: (recipesJson?.data?.allCodexRecipes?.nodes ?? []).map((node: CodexRecipe) => ({
       ...node,
       minimumStats: parseJson<Record<string, number>>(node.minimumStats),
       input: parseJson<RecipeInput>(node.input) ?? node.input,
       output: parseJson<RecipeOutput | RecipeOutput[]>(node.output) ?? node.output
     })),
-    resourceMints: (json?.data?.allCodexResourceMints?.nodes ?? []) as CodexResourceMint[]
+    resourceMints: (resourceMintsJson?.data?.allCodexResourceMints?.nodes ?? []) as CodexResourceMint[]
   }
 }

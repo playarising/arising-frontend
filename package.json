@@ -22,7 +22,6 @@
     "@solana/wallet-adapter-torus": "0.11.32",
     "@solana/web3.js": "1.98.4",
     "@vercel/analytics": "1.5.0",
-    "animate.css": "4.1.1",
     "bs58": "6.0.0",
     "framer-motion": "11",
     "next": "16.0.3",
@@ -30,7 +29,8 @@
     "nextjs-toploader": "2",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "tweetnacl": "1.0.3"
+    "tweetnacl": "1.0.3",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.5",

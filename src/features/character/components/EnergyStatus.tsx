@@ -5,8 +5,8 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, Transaction } from '@solana/web3.js'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { findCharacterPda, refillEnergyIx } from '@/lib/arising'
-import { resolveCivilizationIndex } from '../utils/progression'
+import { findCharacterPda, refillEnergyIx } from '@/lib'
+import { resolveCivilizationIndex } from '@/features'
 import { ModuleLoader } from './ModuleLoader'
 
 type Props = {

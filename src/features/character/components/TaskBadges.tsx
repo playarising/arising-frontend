@@ -1,8 +1,8 @@
 'use client'
 
 import { Badge, Flex } from '@chakra-ui/react'
-import type { RecipeInput, RecipeOutput, QuestReward } from '@/lib/characters'
-import { parseJson, sanitizeName } from '../utils/taskUtils'
+import type { RecipeInput, RecipeOutput, QuestReward } from '@/lib'
+import { parseJson, sanitizeName } from '@/features'
 
 export const StatRequirementBadges = ({ value }: { value: Record<string, number> | undefined }) => {
   const parsed = parseJson(value)

@@ -1,5 +1,5 @@
 import './global.css'
-import 'animate.css'
+
 
 import { createSystem, defaultConfig, defineConfig } from '@chakra-ui/react'
 
