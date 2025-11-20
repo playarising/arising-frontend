@@ -170,7 +170,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
   const renderStatsAccordions = (
     valuePrefix: string,
     options?: {
-      energyContent?: JSX.Element | null
       includeAttributes?: boolean
       includeTasks?: boolean
       includeInventory?: boolean
@@ -184,33 +183,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
       bg="rgba(255,255,255,0.02)"
       width="full"
     >
-      {options?.energyContent && (
-        <Accordion.Item value={`${valuePrefix}-energy-passes`}>
-          <Accordion.ItemTrigger
-            paddingX={3}
-            paddingY={2}
-            _hover={{ bg: 'custom-keppel' }}
-            display="flex"
-            alignItems="center"
-            gap={2}
-            color="white"
-            fontWeight="800"
-            fontSize="md"
-            background="custom-keppel"
-            borderBottom="1px solid rgba(0,0,0,0.1)"
-          >
-            <Text flex="1" textAlign="left">
-              Energy Pass
-            </Text>
-            <Accordion.ItemIndicator />
-          </Accordion.ItemTrigger>
-          <Accordion.ItemContent>
-            <Accordion.ItemBody paddingX={3} paddingY={3}>
-              {options.energyContent}
-            </Accordion.ItemBody>
-          </Accordion.ItemContent>
-        </Accordion.Item>
-      )}
       <Accordion.Item value={`${valuePrefix}-core`}>
         <Accordion.ItemTrigger
           paddingX={3}
@@ -422,18 +394,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
               showPasses={isOwner}
             />
             {renderStatsAccordions('overview', {
-              energyContent: isOwner ? (
-                <EnergyStatus
-                  energy={parsedEnergy}
-                  maxEnergy={maxEnergy}
-                  nextRefillEpochSeconds={nextRefillSeconds}
-                  civilization={character.civilization}
-                  civilizationCharacterId={character.civilizationCharacterId}
-                  energyPasses={resolvedEnergyPasses}
-                  showEnergy={false}
-                  showPasses={isOwner}
-                />
-              ) : null,
               includeAttributes: true,
               includeTasks: true,
               includeInventory: isOwner,

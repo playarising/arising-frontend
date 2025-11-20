@@ -24,6 +24,7 @@ import { useCodexStore } from '@/stores'
 import { CurrentTaskCard } from './CurrentTaskCard'
 import { ModuleLoader } from './ModuleLoader'
 import { ResourceBadges, RewardBadges, StatRequirementBadges } from './TaskBadges'
+import type { CodexResourceMint } from '@/lib'
 
 type QuestState = {
   quest_id?: number
@@ -84,6 +85,8 @@ const QUEST_TYPE_COPY: Record<string, string> = {
   Raid: 'High-intensity excursions designed primarily for experience gain, pushing your character toward the next tier.'
 }
 
+const EMPTY_RESOURCE_MINTS: CodexResourceMint[] = []
+
 const CIV_INDEX: Record<string, number> = {
   Ard: 0,
   Hartenn: 1,
@@ -116,7 +119,7 @@ export function ActionsSwitcher({
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
 
   const { inventory, refreshInventory } = useGameStore()
-  const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints || [])
+  const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints) ?? EMPTY_RESOURCE_MINTS
   const codex = useCodexStore((state) => state.codex)
   const [isPending, startTransition] = useTransition()
 
@@ -425,7 +428,7 @@ export function ActionsSwitcher({
       recipeOptions,
       router,
       refreshInventory,
-      codexResourceMints.find,
+      codexResourceMints,
       effectiveReadOnly
     ]
   )
@@ -501,7 +504,7 @@ export function ActionsSwitcher({
     router,
     questOptions,
     refreshInventory,
-    codexResourceMints.find,
+    codexResourceMints,
     effectiveReadOnly
   ])
 
@@ -576,7 +579,7 @@ export function ActionsSwitcher({
     router,
     recipeOptions,
     refreshInventory,
-    codexResourceMints.find,
+    codexResourceMints,
     effectiveReadOnly
   ])
 

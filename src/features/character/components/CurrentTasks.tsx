@@ -7,7 +7,7 @@ import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { resolveProgress, sanitizeName, splitTitle, useGameStore } from '@/features'
-import type { CodexQuest, CodexRecipe } from '@/lib'
+import type { CodexQuest, CodexRecipe, CodexResourceMint } from '@/lib'
 import { claimQuestIx, claimRecipeIx, findCharacterPda } from '@/lib'
 import { useCodexStore } from '@/stores'
 import { CurrentTaskCard } from './CurrentTaskCard'
@@ -51,12 +51,14 @@ const CIV_INDEX: Record<string, number> = {
   Tarki: 5
 }
 
+const EMPTY_RESOURCE_MINTS: CodexResourceMint[] = []
+
 export function CurrentTasks({ questState, recipeState, civilization, civilizationCharacterId }: CurrentTasksProps) {
   const { connection } = useConnection()
   const { publicKey, signTransaction } = useWallet()
   const router = useRouter()
   const refreshInventory = useGameStore((state) => state.refreshInventory)
-  const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints || [])
+  const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints) ?? EMPTY_RESOURCE_MINTS
   const codex = useCodexStore((state) => state.codex)
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
   const [submitting, setSubmitting] = useState<'quest' | 'recipe' | null>(null)
