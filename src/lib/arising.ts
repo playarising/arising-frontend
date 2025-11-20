@@ -270,6 +270,7 @@ export const claimQuestIx = (
     authority: PublicKey
     mintState?: PublicKey
     tokenProgram?: PublicKey
+    tokenMetadataProgram?: PublicKey
     associatedTokenProgram?: PublicKey
     systemProgram?: PublicKey
     rent?: PublicKey
@@ -285,6 +286,11 @@ export const claimQuestIx = (
       { pubkey: accounts.authority, isWritable: true, isSigner: true },
       { pubkey: accounts.mintState ?? findMintStatePda(programId), isWritable: false, isSigner: false },
       { pubkey: accounts.tokenProgram ?? TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+      {
+        pubkey: accounts.tokenMetadataProgram ?? TOKEN_METADATA_PROGRAM_ID,
+        isWritable: false,
+        isSigner: false
+      },
       {
         pubkey: accounts.associatedTokenProgram ?? ASSOCIATED_TOKEN_PROGRAM_ID,
         isWritable: false,
@@ -304,6 +310,7 @@ export const claimRecipeIx = (
     authority: PublicKey
     mintState?: PublicKey
     tokenProgram?: PublicKey
+    tokenMetadataProgram?: PublicKey
     associatedTokenProgram?: PublicKey
     systemProgram?: PublicKey
     rent?: PublicKey
@@ -319,6 +326,11 @@ export const claimRecipeIx = (
       { pubkey: accounts.authority, isWritable: true, isSigner: true },
       { pubkey: accounts.mintState ?? findMintStatePda(programId), isWritable: false, isSigner: false },
       { pubkey: accounts.tokenProgram ?? TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+      {
+        pubkey: accounts.tokenMetadataProgram ?? TOKEN_METADATA_PROGRAM_ID,
+        isWritable: false,
+        isSigner: false
+      },
       {
         pubkey: accounts.associatedTokenProgram ?? ASSOCIATED_TOKEN_PROGRAM_ID,
         isWritable: false,
@@ -356,6 +368,7 @@ export const equipItemIx = (
     authority: PublicKey
     mintState?: PublicKey
     tokenProgram?: PublicKey
+    tokenMetadataProgram?: PublicKey
     associatedTokenProgram?: PublicKey
     systemProgram?: PublicKey
     rent?: PublicKey
@@ -375,6 +388,11 @@ export const equipItemIx = (
       { pubkey: accounts.authority, isWritable: true, isSigner: true },
       { pubkey: accounts.mintState ?? findMintStatePda(programId), isWritable: false, isSigner: false },
       { pubkey: accounts.tokenProgram ?? TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+      {
+        pubkey: accounts.tokenMetadataProgram ?? TOKEN_METADATA_PROGRAM_ID,
+        isWritable: false,
+        isSigner: false
+      },
       {
         pubkey: accounts.associatedTokenProgram ?? ASSOCIATED_TOKEN_PROGRAM_ID,
         isWritable: false,

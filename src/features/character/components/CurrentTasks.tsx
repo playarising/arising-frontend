@@ -5,7 +5,7 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { resolveProgress, sanitizeName, splitTitle, useGameStore } from '@/features'
 import type { CodexQuest, CodexRecipe } from '@/lib'
 import { claimQuestIx, claimRecipeIx, findCharacterPda } from '@/lib'
@@ -64,8 +64,12 @@ export function CurrentTasks({
   const router = useRouter()
   const refreshInventory = useGameStore((state) => state.refreshInventory)
   const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints || [])
+  const codex = useCodexStore((state) => state.codex)
+  const loadCodex = useCodexStore((state) => state.loadCodex)
+  const codexLoading = useCodexStore((state) => state.isLoading)
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
   const [submitting, setSubmitting] = useState<'quest' | 'recipe' | null>(null)
+  const isUserRejection = useCallback((err: unknown) => err instanceof Error && /user rejected/i.test(err.message), [])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -73,6 +77,22 @@ export function CurrentTasks({
     }, 1000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (!codex && !codexLoading) {
+      loadCodex()
+    }
+  }, [codex, codexLoading, loadCodex])
+
+  const effectiveQuests = useMemo(() => {
+    if (codexQuests.length) return codexQuests
+    return codex?.quests ?? []
+  }, [codexQuests, codex])
+
+  const effectiveRecipes = useMemo(() => {
+    if (codexRecipes.length) return codexRecipes
+    return codex?.recipes ?? []
+  }, [codexRecipes, codex])
 
   const questProgress = resolveProgress(questState, currentTime)
   const recipeProgress = resolveProgress(recipeState, currentTime)
@@ -87,7 +107,7 @@ export function CurrentTasks({
       const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
       // Build remaining accounts for resource rewards
-      const questMeta = codexQuests.find((q) => Number(q.id) === questId)
+      const questMeta = effectiveQuests.find((q) => Number(q.id) === questId)
       const rewards = questMeta?.rewards ?? []
       const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
 
@@ -126,6 +146,9 @@ export function CurrentTasks({
 
       await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
     } catch (error) {
+      if (isUserRejection(error)) {
+        return
+      }
       console.error('Failed to claim quest:', error)
       alert(`Failed to claim quest: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
@@ -139,8 +162,9 @@ export function CurrentTasks({
     civilizationCharacterId,
     connection,
     router,
-    codexQuests,
+    effectiveQuests,
     codexResourceMints,
+    isUserRejection,
     refreshInventory
   ])
 
@@ -154,7 +178,7 @@ export function CurrentTasks({
       const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
       // Build remaining accounts for resource output
-      const recipeMeta = codexRecipes.find((r) => Number(r.id) === recipeId)
+      const recipeMeta = effectiveRecipes.find((r) => Number(r.id) === recipeId)
       const output = recipeMeta?.output
       const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
 
@@ -193,6 +217,9 @@ export function CurrentTasks({
 
       await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
     } catch (error) {
+      if (isUserRejection(error)) {
+        return
+      }
       console.error('Failed to claim recipe:', error)
       alert(`Failed to claim recipe: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
@@ -206,8 +233,9 @@ export function CurrentTasks({
     civilizationCharacterId,
     connection,
     router,
-    codexRecipes,
+    effectiveRecipes,
     codexResourceMints,
+    isUserRejection,
     refreshInventory
   ])
 
@@ -235,7 +263,7 @@ export function CurrentTasks({
             {questState ? (
               (() => {
                 const questId = Number(questState.quest_id ?? questState.questId ?? NaN)
-                const questMeta = codexQuests.find((q) => Number(q.id) === questId)
+                const questMeta = effectiveQuests.find((q) => Number(q.id) === questId)
                 const title = questMeta?.displayName ?? (Number.isFinite(questId) ? `Quest #${questId}` : 'Quest')
                 const parts = splitTitle(title).map((line) => sanitizeName(line))
                 const rewards = questMeta?.rewards ?? questState.rewards
@@ -282,7 +310,7 @@ export function CurrentTasks({
             {recipeState ? (
               (() => {
                 const recipeId = Number(recipeState.recipe_id ?? recipeState.recipeId ?? NaN)
-                const recipeMeta = codexRecipes.find((r) => Number(r.id) === recipeId)
+                const recipeMeta = effectiveRecipes.find((r) => Number(r.id) === recipeId)
                 const displayName =
                   recipeMeta?.displayName ?? (Number.isFinite(recipeId) ? `Recipe #${recipeId}` : 'Recipe')
                 const parts = splitTitle(sanitizeName(displayName)).map((line) => sanitizeName(line))

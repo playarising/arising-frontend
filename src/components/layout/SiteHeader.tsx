@@ -1,6 +1,7 @@
 'use client'
 
 import { Box, Button, Flex, HStack, Spinner, Stack, Text } from '@chakra-ui/react'
+import { useConnection } from '@solana/wallet-adapter-react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import bs58 from 'bs58'
 import Image from 'next/image'
@@ -8,10 +9,17 @@ import { usePathname, useRouter } from 'next/navigation'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppLink } from '@/components/navigation'
+import { useGameStore } from '@/features'
+import { useCodexStore } from '@/stores'
 import { dispatchOpenMintModal, fetchCharactersForAuthority } from '@/lib'
 
 export function SiteHeader() {
+  const { connection } = useConnection()
   const { connected, disconnect, publicKey, signMessage } = useWallet()
+  const initializeGame = useGameStore((state) => state.initialize)
+  const loadCodex = useCodexStore((state) => state.loadCodex)
+  const codex = useCodexStore((state) => state.codex)
+  const codexLoading = useCodexStore((state) => state.isLoading)
 
   const { data: session, status: sessionStatus } = useSession()
 
@@ -20,10 +28,32 @@ export function SiteHeader() {
   const [signingIn, setSigningIn] = useState(false)
   const [hasCharacters, setHasCharacters] = useState(false)
   const [loadingCharacters, setLoadingCharacters] = useState(false)
+  const inventoryInitialized = useRef(false)
 
   const router = useRouter()
   const pathname = usePathname()
   const walletAddress = useMemo(() => publicKey?.toBase58() ?? null, [publicKey])
+
+  // Kick off codex load on app entry so heavy request happens once globally.
+  useEffect(() => {
+    if (!codex && !codexLoading) {
+      loadCodex()
+    }
+  }, [codex, codexLoading, loadCodex])
+
+  // Start background inventory/codex initialization as soon as we have a wallet connection.
+  useEffect(() => {
+    if (!connected || !publicKey || !connection) {
+      inventoryInitialized.current = false
+      return
+    }
+    if (inventoryInitialized.current) return
+    inventoryInitialized.current = true
+    void initializeGame(connection, publicKey).catch((err) => {
+      console.error('Failed to prefetch inventory/codex', err)
+      inventoryInitialized.current = false
+    })
+  }, [connected, publicKey, connection, initializeGame])
 
   useEffect(() => {
     if (sessionStatus === 'loading') return

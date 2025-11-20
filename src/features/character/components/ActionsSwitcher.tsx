@@ -5,11 +5,19 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
 import { useRouter } from 'next/navigation'
-import { type JSX, useCallback, useEffect, useState, useTransition } from 'react'
+import { type JSX, useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { formatDuration, parseJson, resolveProgress, sanitizeName, splitTitle } from '@/features'
 import { useGameStore } from '@/features/character/stores/useGameStore'
 import type { QuestReward, RecipeInput, RecipeOutput } from '@/lib'
-import { claimQuestIx, claimRecipeIx, findCharacterPda, startQuestIx, startRecipeIx } from '@/lib'
+import {
+  calculateQuestEnergyCost,
+  calculateRecipeEnergyCost,
+  claimQuestIx,
+  claimRecipeIx,
+  findCharacterPda,
+  startQuestIx,
+  startRecipeIx
+} from '@/lib'
 import { useCodexStore } from '@/stores'
 import { CurrentTaskCard } from './CurrentTaskCard'
 import { ModuleLoader } from './ModuleLoader'
@@ -59,13 +67,6 @@ export type ActionsSwitcherProps = {
   characterLevel: number
   characterEnergy: number
   characterStats: Record<string, number>
-
-  initialInventory: Array<{
-    resource: string
-    displayName: string
-    mint: string
-    amount: number
-  }>
   civilization: string
   civilizationCharacterId: number
   currentQuest: QuestState | null
@@ -94,7 +95,6 @@ export function ActionsSwitcher({
   characterLevel,
   characterEnergy,
   characterStats,
-  initialInventory,
   civilization,
   civilizationCharacterId,
   currentQuest,
@@ -105,15 +105,13 @@ export function ActionsSwitcher({
   const router = useRouter()
   const [view, setView] = useState<(typeof VIEWS)[number]>('quests')
   const [submitting, setSubmitting] = useState<number | string | null>(null)
+  const isUserRejection = useCallback((err: unknown) => err instanceof Error && /user rejected/i.test(err.message), [])
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
 
-  const { inventory, setInventory, refreshInventory } = useGameStore()
+  const { inventory, refreshInventory } = useGameStore()
   const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints || [])
+  const codex = useCodexStore((state) => state.codex)
   const [isPending, startTransition] = useTransition()
-
-  useEffect(() => {
-    setInventory(initialInventory)
-  }, [initialInventory, setInventory])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -121,6 +119,51 @@ export function ActionsSwitcher({
     }, 1000)
     return () => clearInterval(interval)
   }, [])
+
+  const characterCoreStats = useMemo(
+    () => ({
+      might: Number.isFinite(characterStats.might) ? characterStats.might : 0,
+      speed: Number.isFinite(characterStats.speed) ? characterStats.speed : 0,
+      intellect: Number.isFinite(characterStats.intellect) ? characterStats.intellect : 0
+    }),
+    [characterStats]
+  )
+
+  const questOptions = useMemo(() => {
+    if (quests.length) return quests
+    if (!codex) return []
+    return codex.quests
+      .filter((item) => (item.levelRequired ?? 0) <= characterLevel)
+      .sort((a, b) => a.levelRequired - b.levelRequired || a.id - b.id)
+      .map((q) => ({
+        id: q.id,
+        name: q.displayName,
+        levelRequired: q.levelRequired,
+        energyCost: calculateQuestEnergyCost(q, characterLevel, characterCoreStats),
+        type: q.questType,
+        rewards: q.rewards,
+        requirements: q.minimumStats,
+        durationSeconds: q.cooldownSeconds
+      }))
+  }, [quests, codex, characterLevel, characterCoreStats])
+
+  const recipeOptions = useMemo(() => {
+    if (recipes.length) return recipes
+    if (!codex) return []
+    return codex.recipes
+      .filter((item) => (item.levelRequired ?? 0) <= characterLevel)
+      .sort((a, b) => a.levelRequired - b.levelRequired || a.id - b.id)
+      .map((r) => ({
+        id: r.id,
+        name: r.displayName,
+        levelRequired: r.levelRequired,
+        type: r.recipeType,
+        energyCost: calculateRecipeEnergyCost(r, characterLevel, characterCoreStats),
+        input: r.input,
+        output: r.output,
+        durationSeconds: r.cooldownSeconds
+      }))
+  }, [recipes, codex, characterLevel, characterCoreStats])
 
   const validateQuest = (quest: {
     levelRequired: number
@@ -269,7 +312,7 @@ export function ActionsSwitcher({
         const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
         // Build remaining accounts for input materials
-        const recipeMeta = recipes.find((r) => r.id === recipeId)
+        const recipeMeta = recipeOptions.find((r) => r.id === recipeId)
         const input = recipeMeta?.input
         const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
 
@@ -355,7 +398,7 @@ export function ActionsSwitcher({
       civilization,
       civilizationCharacterId,
       connection,
-      recipes,
+      recipeOptions,
       router,
       refreshInventory,
       codexResourceMints.find
@@ -372,7 +415,7 @@ export function ActionsSwitcher({
       const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
       // Build remaining accounts for resource rewards
-      const questMeta = quests.find((q) => q.id === questId)
+      const questMeta = questOptions.find((q) => q.id === questId)
       const rewards = questMeta?.rewards ?? []
       const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
 
@@ -413,6 +456,10 @@ export function ActionsSwitcher({
         await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
       })
     } catch (error) {
+      if (isUserRejection(error)) {
+        setSubmitting(null)
+        return
+      }
       console.error('Failed to claim quest:', error)
       alert(`Failed to claim quest: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setSubmitting(null)
@@ -424,8 +471,9 @@ export function ActionsSwitcher({
     civilization,
     civilizationCharacterId,
     connection,
+    isUserRejection,
     router,
-    quests,
+    questOptions,
     refreshInventory,
     codexResourceMints.find
   ])
@@ -440,7 +488,7 @@ export function ActionsSwitcher({
       const characterPda = findCharacterPda(civIndex, civilizationCharacterId)
 
       // Build remaining accounts for resource output
-      const recipeMeta = recipes.find((r) => r.id === recipeId)
+      const recipeMeta = recipeOptions.find((r) => r.id === recipeId)
       const output = recipeMeta?.output
       const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = []
 
@@ -481,6 +529,10 @@ export function ActionsSwitcher({
         await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
       })
     } catch (error) {
+      if (isUserRejection(error)) {
+        setSubmitting(null)
+        return
+      }
       console.error('Failed to claim recipe:', error)
       alert(`Failed to claim recipe: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setSubmitting(null)
@@ -492,8 +544,9 @@ export function ActionsSwitcher({
     civilization,
     civilizationCharacterId,
     connection,
+    isUserRejection,
     router,
-    recipes,
+    recipeOptions,
     refreshInventory,
     codexResourceMints.find
   ])
@@ -536,7 +589,7 @@ export function ActionsSwitcher({
     </Text>
   )
 
-  const questList = quests.map((quest) => {
+  const questList = questOptions.map((quest) => {
     const validation = validateQuest(quest)
     return (
       <Box
@@ -625,7 +678,7 @@ export function ActionsSwitcher({
     )
   })
   const cardsForType = (needle: string) =>
-    quests
+    questOptions
       .map((quest, idx) => ((quest.type ?? '').toLowerCase().includes(needle) ? questList[idx] : null))
       .filter(Boolean) as JSX.Element[]
   const questSections = [
@@ -634,7 +687,7 @@ export function ActionsSwitcher({
     { title: 'Raids', copy: QUEST_TYPE_COPY.Raid, items: cardsForType('raid') }
   ].filter((section) => section.items.length)
 
-  const craftList = recipes
+  const craftList = recipeOptions
     .filter((recipe) => (recipe.type ?? '').toLowerCase().includes('craft'))
     .map((recipe) => {
       const validation = validateRecipe(recipe)
@@ -725,7 +778,7 @@ export function ActionsSwitcher({
       )
     })
 
-  const forgeList = recipes
+  const forgeList = recipeOptions
     .filter((recipe) => (recipe.type ?? '').toLowerCase().includes('forge'))
     .map((recipe) => {
       const validation = validateRecipe(recipe)
@@ -819,7 +872,7 @@ export function ActionsSwitcher({
   const renderCurrentTask = () => {
     if (isQuests && currentQuest) {
       const questId = Number(currentQuest.quest_id ?? currentQuest.questId ?? NaN)
-      const questMeta = quests.find((q) => q.id === questId)
+      const questMeta = questOptions.find((q) => q.id === questId)
       const questName = questMeta?.name ?? (Number.isFinite(questId) ? `Quest #${questId}` : 'Quest')
       const nameParts = splitTitle(questName)
       const progress = questProgress
@@ -840,7 +893,7 @@ export function ActionsSwitcher({
 
     if ((isCraft || view === 'forge') && currentRecipe) {
       const recipeId = Number(currentRecipe.recipe_id ?? currentRecipe.recipeId ?? NaN)
-      const recipeMeta = recipes.find((r) => r.id === recipeId)
+      const recipeMeta = recipeOptions.find((r) => r.id === recipeId)
       const recipeName = recipeMeta?.name ?? (Number.isFinite(recipeId) ? `Recipe #${recipeId}` : 'Recipe')
       const nameParts = splitTitle(recipeName)
       const progress = recipeProgress ?? resolveProgress(currentRecipe, currentTime)
@@ -888,10 +941,11 @@ export function ActionsSwitcher({
   }
 
   const hasContent = content !== null && (Array.isArray(content) ? content.length > 0 : true)
+  const isClaimSubmitting = submitting === 'quest-claim' || submitting === 'recipe-claim'
 
   return (
     <Box position="relative">
-      <ModuleLoader loading={Boolean(submitting)} label="Submitting transaction..." />
+      <ModuleLoader loading={Boolean(submitting) && !isClaimSubmitting} label="Submitting transaction..." />
       <Stack gap={4} width="full">
         <Grid templateColumns="auto minmax(0, 1fr) auto" alignItems="center" gap={{ base: 2, md: 0 }} width="full">
           <Box

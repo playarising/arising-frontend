@@ -1,24 +1,13 @@
 import { Accordion, Flex, Grid, GridItem, Progress, Stack, Text } from '@chakra-ui/react'
-import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
-import { Connection, clusterApiUrl, PublicKey } from '@solana/web3.js'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import {
-  ActionsSwitcher,
-  CurrentTasks,
-  calculateCorePointAvailability,
-  EnergyStatus,
-  StatAllocationList
-} from '@/features'
+import { ActionsSwitcher, CurrentTasks, EnergyStatus, StatAllocationList } from '@/features'
 import {
   authOptions,
-  calculateQuestEnergyCost,
-  calculateRecipeEnergyCost,
   fetchCharacterMetadata,
   fetchCharactersForAuthority,
-  fetchCodex,
   LEVEL_CURVE,
   levelFromExperience
 } from '@/lib'
@@ -76,13 +65,9 @@ export default async function CharacterPage({ params }: { params: Params }) {
   const character = owned.find((c) => c.nftMint === mint)
   if (!character) notFound()
 
-  const metadata = await fetchCharacterMetadata(character.civilization, character.civilizationCharacterId).catch(
-    () => undefined
-  )
-  const codex = await fetchCodex()
-  const rpcEndpoint = process.env.NEXT_PUBLIC_SOLANA_RPC?.trim() || clusterApiUrl('devnet')
-  const connection = new Connection(rpcEndpoint, 'confirmed')
-  const ownerKey = new PublicKey(session.user.address)
+  const [metadata] = await Promise.all([
+    fetchCharacterMetadata(character.civilization, character.civilizationCharacterId).catch(() => undefined)
+  ])
 
   const metadataLevelAttr = metadata?.attributes?.find((attr) => attr.trait_type === 'Level')?.value
   const metadataLevelNumber =
@@ -141,12 +126,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
 
   const parsedStatsEntries = toNumericEntries(parsedStatsObj)
   const parsedStatsNumbers = Object.fromEntries(parsedStatsEntries) as Record<string, number>
-  const corePointAvailability = calculateCorePointAvailability(
-    characterLevel,
-    character.civilization,
-    parsedStatsNumbers
-  )
-  const _availableCorePoints = corePointAvailability.available
 
   let parsedAttributesObj: Record<string, unknown> = {}
   if (typeof character.attributes === 'string') {
@@ -177,70 +156,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
 
   const resolvedQuestState = parseState(character.currentQuest)
   const resolvedRecipeState = parseState(character.currentRecipe)
-
-  const availableQuests = codex.quests
-    .filter((item) => (item.levelRequired ?? 0) <= characterLevel)
-    .sort((a, b) => a.levelRequired - b.levelRequired || a.id - b.id)
-  const availableRecipes = codex.recipes
-    .filter((item) => (item.levelRequired ?? 0) <= characterLevel)
-    .sort((a, b) => a.levelRequired - b.levelRequired || a.id - b.id)
-
-  const characterCoreStats = {
-    might: Number.isFinite(parsedStatsNumbers.might) ? parsedStatsNumbers.might : 0,
-    speed: Number.isFinite(parsedStatsNumbers.speed) ? parsedStatsNumbers.speed : 0,
-    intellect: Number.isFinite(parsedStatsNumbers.intellect) ? parsedStatsNumbers.intellect : 0
-  }
-
-  const questsForClient = availableQuests.map((q) => ({
-    id: q.id,
-    name: q.displayName,
-    levelRequired: q.levelRequired,
-    energyCost: calculateQuestEnergyCost(q, characterLevel, characterCoreStats),
-    type: q.questType,
-    rewards: q.rewards,
-    requirements: q.minimumStats,
-    durationSeconds: q.cooldownSeconds
-  }))
-
-  const recipesForClient = availableRecipes.map((r) => ({
-    id: r.id,
-    name: r.displayName,
-    levelRequired: r.levelRequired,
-    type: r.recipeType,
-    energyCost: calculateRecipeEnergyCost(r, characterLevel, characterCoreStats),
-    input: r.input,
-    output: r.output,
-    durationSeconds: r.cooldownSeconds
-  }))
-
-  const resourceMintMap = new Map(
-    codex.resourceMints.map((r) => [r.mint, { resource: r.resource, displayName: r.displayName, mint: r.mint }])
-  )
-
-  const ownerTokenAccounts = await connection
-    .getTokenAccountsByOwner(ownerKey, { programId: TOKEN_PROGRAM_ID })
-    .catch(() => ({ value: [] }))
-
-  const inventoryBalances: { resource: string; displayName: string; mint: string; amount: number }[] = []
-
-  for (const acc of ownerTokenAccounts.value) {
-    try {
-      const decoded = AccountLayout.decode(acc.account.data)
-      const mintB58 = new PublicKey(decoded.mint).toBase58()
-      const meta = resourceMintMap.get(mintB58)
-      if (!meta) continue
-      const asNumber = Number(BigInt(decoded.amount.toString()))
-      if (asNumber <= 0) continue
-      inventoryBalances.push({
-        resource: meta.resource,
-        displayName: meta.displayName,
-        mint: meta.mint,
-        amount: asNumber
-      })
-    } catch {
-      // ignore malformed accounts
-    }
-  }
 
   const renderStatsAccordions = (
     valuePrefix: string,
@@ -322,8 +237,8 @@ export default async function CharacterPage({ params }: { params: Params }) {
         <CurrentTasks
           questState={resolvedQuestState}
           recipeState={resolvedRecipeState}
-          codexQuests={codex.quests}
-          codexRecipes={codex.recipes}
+          codexQuests={[]}
+          codexRecipes={[]}
           civilization={character.civilization}
           civilizationCharacterId={character.civilizationCharacterId}
         />
@@ -348,43 +263,9 @@ export default async function CharacterPage({ params }: { params: Params }) {
           </Accordion.ItemTrigger>
           <Accordion.ItemContent>
             <Accordion.ItemBody paddingX={3} paddingY={3}>
-              {inventoryBalances.length ? (
-                <Stack gap={2} color="gray.300" fontSize="sm" width="full">
-                  {inventoryBalances.map((item) => (
-                    <Flex
-                      key={item.mint}
-                      direction="row"
-                      justify="space-between"
-                      align="center"
-                      border="1px solid rgba(255,255,255,0.08)"
-                      borderRadius="md"
-                      padding={3}
-                      bg="rgba(255,255,255,0.02)"
-                      width="full"
-                      gap={3}
-                    >
-                      <Text
-                        color="white"
-                        fontWeight="700"
-                        flex="1 1 auto"
-                        whiteSpace="nowrap"
-                        overflow="hidden"
-                        textOverflow="ellipsis"
-                        textAlign="left"
-                      >
-                        {item.displayName}
-                      </Text>
-                      <Text color="gray.200" fontWeight="700" flexShrink={0}>
-                        {item.amount}
-                      </Text>
-                    </Flex>
-                  ))}
-                </Stack>
-              ) : (
-                <Text color="gray.500" fontSize="sm">
-                  None
-                </Text>
-              )}
+              <Text color="gray.500" fontSize="sm">
+                Inventory will appear after your wallet syncs on the client.
+              </Text>
             </Accordion.ItemBody>
           </Accordion.ItemContent>
         </Accordion.Item>
@@ -519,12 +400,11 @@ export default async function CharacterPage({ params }: { params: Params }) {
             gap={4}
           >
             <ActionsSwitcher
-              quests={questsForClient}
-              recipes={recipesForClient}
+              quests={[]}
+              recipes={[]}
               characterLevel={characterLevel}
               characterEnergy={parsedEnergy}
               characterStats={Object.fromEntries(parsedStatsEntries)}
-              initialInventory={inventoryBalances}
               civilization={character.civilization}
               civilizationCharacterId={character.civilizationCharacterId}
               currentQuest={resolvedQuestState}

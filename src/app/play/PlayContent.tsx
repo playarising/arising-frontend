@@ -476,7 +476,7 @@ export function PlayContent() {
           position="relative"
           minHeight="calc(100vh - 180px)"
         >
-          <Box width="full" textAlign="center" top="3" position="absolute">
+          <Box width="full" textAlign="center" top="1" position="absolute">
             <Text color="white" fontWeight="700" fontSize={{ base: 'xl', md: '2xl' }}>
               Your characters
             </Text>
