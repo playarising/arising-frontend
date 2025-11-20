@@ -4,7 +4,7 @@ import { Flex, Text } from '@chakra-ui/react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import Image from 'next/image'
 
-export function StartButton() {
+export function ConnectWalletButton({ title = 'START' }: { title?: string }) {
   const { setVisible } = useWalletModal()
 
   const handleClick = () => {
@@ -32,7 +32,7 @@ export function StartButton() {
         zIndex={5}
       >
         <Text color="white" fontWeight="600">
-          START
+          {title}
         </Text>
       </Flex>
       <Image

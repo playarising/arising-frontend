@@ -1,2 +1,2 @@
-export * from './StartButton'
+export * from './ConnectWallet'
 export * from './TopLoader'

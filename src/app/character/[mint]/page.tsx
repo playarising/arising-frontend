@@ -1,12 +1,14 @@
 import { Accordion, Flex, Grid, GridItem, Progress, Stack, Text } from '@chakra-ui/react'
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import type { JSX } from 'react'
 import { ActionsSwitcher, CurrentTasks, EnergyStatus, StatAllocationList } from '@/features'
 import {
   authOptions,
+  type CharacterRecord,
+  fetchCharacterByMint,
   fetchCharacterMetadata,
   fetchCharactersForAuthority,
   LEVEL_CURVE,
@@ -58,13 +60,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function CharacterPage({ params }: { params: Params }) {
   const { mint } = await params
   const session = await getServerSession(authOptions)
-  if (!session?.user?.address) {
-    redirect('/play')
+  const owned = session?.user?.address ? await fetchCharactersForAuthority(session.user.address).catch(() => []) : []
+  let character: CharacterRecord | undefined | null = owned.find((c) => c.nftMint === mint)
+  if (!character) {
+    character = (await fetchCharacterByMint(mint)) || null
   }
-
-  const owned = await fetchCharactersForAuthority(session.user.address).catch(() => [])
-  const character = owned.find((c) => c.nftMint === mint)
   if (!character) notFound()
+  const isOwner = session?.user?.address === character.authority
 
   const [metadata] = await Promise.all([
     fetchCharacterMetadata(character.civilization, character.civilizationCharacterId).catch(() => undefined)
@@ -200,14 +202,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
             <Text flex="1" textAlign="left">
               Energy Pass
             </Text>
-            <Text
-              as="span"
-              title="Buy energy passes (2 USDC each), up to 5 purchases and 3 redeems per 24h. Redeeming instantly refills energy."
-              fontWeight="800"
-              fontSize="sm"
-              cursor="help"
-              color="black"
-            ></Text>
             <Accordion.ItemIndicator />
           </Accordion.ItemTrigger>
           <Accordion.ItemContent>
@@ -350,9 +344,9 @@ export default async function CharacterPage({ params }: { params: Params }) {
       justify="center"
       minH="100vh"
       bg="black"
-      paddingY={16}
+      paddingY={12}
       paddingX={{ base: 4, md: 8 }}
-      paddingTop={{ base: 28, md: 36 }}
+      paddingTop={20}
     >
       <Grid templateColumns={{ base: '1fr', lg: '1fr 3fr' }} gap={{ base: 6, lg: 10 }} width="full" maxW="1200px">
         <GridItem>
@@ -425,10 +419,10 @@ export default async function CharacterPage({ params }: { params: Params }) {
               civilization={character.civilization}
               civilizationCharacterId={character.civilizationCharacterId}
               energyPasses={resolvedEnergyPasses}
-              showPasses={false}
+              showPasses={isOwner}
             />
             {renderStatsAccordions('overview', {
-              energyContent: (
+              energyContent: isOwner ? (
                 <EnergyStatus
                   energy={parsedEnergy}
                   maxEnergy={maxEnergy}
@@ -437,11 +431,12 @@ export default async function CharacterPage({ params }: { params: Params }) {
                   civilizationCharacterId={character.civilizationCharacterId}
                   energyPasses={resolvedEnergyPasses}
                   showEnergy={false}
+                  showPasses={isOwner}
                 />
-              ),
+              ) : null,
               includeAttributes: true,
               includeTasks: true,
-              includeInventory: true,
+              includeInventory: isOwner,
               includeEquipment: true
             })}
           </Stack>
@@ -456,17 +451,41 @@ export default async function CharacterPage({ params }: { params: Params }) {
             width="full"
             gap={4}
           >
-            <ActionsSwitcher
-              quests={[]}
-              recipes={[]}
-              characterLevel={characterLevel}
-              characterEnergy={parsedEnergy}
-              characterStats={Object.fromEntries(parsedStatsEntries)}
-              civilization={character.civilization}
-              civilizationCharacterId={character.civilizationCharacterId}
-              currentQuest={resolvedQuestState}
-              currentRecipe={resolvedRecipeState}
-            />
+            {isOwner ? (
+              <ActionsSwitcher
+                quests={[]}
+                recipes={[]}
+                characterLevel={characterLevel}
+                characterEnergy={parsedEnergy}
+                characterStats={Object.fromEntries(parsedStatsEntries)}
+                civilization={character.civilization}
+                civilizationCharacterId={character.civilizationCharacterId}
+                currentQuest={resolvedQuestState}
+                currentRecipe={resolvedRecipeState}
+                ownerAuthority={character.authority}
+              />
+            ) : resolvedQuestState || resolvedRecipeState ? (
+              <ActionsSwitcher
+                quests={[]}
+                recipes={[]}
+                characterLevel={characterLevel}
+                characterEnergy={parsedEnergy}
+                characterStats={Object.fromEntries(parsedStatsEntries)}
+                civilization={character.civilization}
+                civilizationCharacterId={character.civilizationCharacterId}
+                currentQuest={resolvedQuestState}
+                currentRecipe={resolvedRecipeState}
+                readOnly
+                ownerAuthority={character.authority}
+              />
+            ) : (
+              <Stack gap={2} color="gray.300" fontSize="sm" textAlign="center">
+                <Text fontWeight="700" color="white">
+                  Read-only view
+                </Text>
+                <Text>Connect the owner wallet to start quests, craft, or manage energy passes.</Text>
+              </Stack>
+            )}
           </Stack>
         </GridItem>
       </Grid>

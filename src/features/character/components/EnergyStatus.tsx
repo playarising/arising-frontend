@@ -8,12 +8,12 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { resolveCivilizationIndex } from '@/features'
 import {
-  USDC_MINT_DEVNET,
   buyEnergyPassIx,
   findCharacterPda,
   findMintStatePda,
   redeemEnergyPassIx,
-  refillEnergyIx
+  refillEnergyIx,
+  USDC_MINT_DEVNET
 } from '@/lib'
 import { ModuleLoader } from './ModuleLoader'
 

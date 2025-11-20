@@ -5,7 +5,9 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { type JSX, useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import { ConnectWalletButton } from '@/components'
 import { formatDuration, parseJson, resolveProgress, sanitizeName, splitTitle } from '@/features'
 import { useGameStore } from '@/features/character/stores/useGameStore'
 import type { QuestReward, RecipeInput, RecipeOutput } from '@/lib'
@@ -71,6 +73,8 @@ export type ActionsSwitcherProps = {
   civilizationCharacterId: number
   currentQuest: QuestState | null
   currentRecipe: RecipeState | null
+  readOnly?: boolean
+  ownerAuthority?: string
 }
 
 const VIEWS = ['quests', 'craft', 'forge'] as const
@@ -98,10 +102,13 @@ export function ActionsSwitcher({
   civilization,
   civilizationCharacterId,
   currentQuest,
-  currentRecipe
+  currentRecipe,
+  readOnly = false,
+  ownerAuthority
 }: ActionsSwitcherProps) {
   const { connection } = useConnection()
   const { publicKey, signTransaction } = useWallet()
+  const { data: session } = useSession()
   const router = useRouter()
   const [view, setView] = useState<(typeof VIEWS)[number]>('quests')
   const [submitting, setSubmitting] = useState<number | string | null>(null)
@@ -112,6 +119,12 @@ export function ActionsSwitcher({
   const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints || [])
   const codex = useCodexStore((state) => state.codex)
   const [isPending, startTransition] = useTransition()
+
+  const walletAddress = publicKey?.toBase58() ?? null
+  const sessionAddress = session?.user?.address ?? null
+  const isOwnerWallet = ownerAuthority && walletAddress === ownerAuthority
+  const isOwnerSession = ownerAuthority && sessionAddress === ownerAuthority
+  const effectiveReadOnly = readOnly && !(isOwnerWallet || isOwnerSession)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -266,6 +279,7 @@ export function ActionsSwitcher({
 
   const handleStartQuest = useCallback(
     async (questId: number) => {
+      if (effectiveReadOnly) return
       if (!publicKey || !signTransaction) return
 
       try {
@@ -299,11 +313,21 @@ export function ActionsSwitcher({
         setSubmitting(null)
       }
     },
-    [publicKey, signTransaction, civilization, civilizationCharacterId, connection, router, refreshInventory]
+    [
+      publicKey,
+      signTransaction,
+      civilization,
+      civilizationCharacterId,
+      connection,
+      router,
+      refreshInventory,
+      effectiveReadOnly
+    ]
   )
 
   const handleStartRecipe = useCallback(
     async (recipeId: number) => {
+      if (effectiveReadOnly) return
       if (!publicKey || !signTransaction) return
 
       try {
@@ -401,11 +425,13 @@ export function ActionsSwitcher({
       recipeOptions,
       router,
       refreshInventory,
-      codexResourceMints.find
+      codexResourceMints.find,
+      effectiveReadOnly
     ]
   )
 
   const handleClaimQuest = useCallback(async () => {
+    if (effectiveReadOnly) return
     if (!publicKey || !signTransaction || !currentQuest) return
 
     try {
@@ -475,10 +501,12 @@ export function ActionsSwitcher({
     router,
     questOptions,
     refreshInventory,
-    codexResourceMints.find
+    codexResourceMints.find,
+    effectiveReadOnly
   ])
 
   const handleClaimRecipe = useCallback(async () => {
+    if (effectiveReadOnly) return
     if (!publicKey || !signTransaction || !currentRecipe) return
 
     try {
@@ -548,7 +576,8 @@ export function ActionsSwitcher({
     router,
     recipeOptions,
     refreshInventory,
-    codexResourceMints.find
+    codexResourceMints.find,
+    effectiveReadOnly
   ])
 
   useEffect(() => {
@@ -884,7 +913,7 @@ export function ActionsSwitcher({
           primaryLabel="REWARDS"
           primaryContent={<RewardBadges value={rewards as QuestReward[]} />}
           progress={progress}
-          onClaim={handleClaimQuest}
+          onClaim={effectiveReadOnly ? undefined : handleClaimQuest}
           claimLabel="Claim quest"
           submitting={submitting === 'quest-claim' || (isPending && submitting === 'quest-claim')}
         />
@@ -904,7 +933,7 @@ export function ActionsSwitcher({
           primaryLabel="PRODUCES"
           primaryContent={<ResourceBadges value={recipeMeta?.output ?? currentRecipe.output} type="output" />}
           progress={progress}
-          onClaim={handleClaimRecipe}
+          onClaim={effectiveReadOnly ? undefined : handleClaimRecipe}
           claimLabel="Claim craft"
           submitting={submitting === 'recipe-claim' || (isPending && submitting === 'recipe-claim')}
         />
@@ -918,7 +947,18 @@ export function ActionsSwitcher({
 
   let content: JSX.Element | JSX.Element[] | null = currentTaskView
 
-  if (!content) {
+  if (effectiveReadOnly) {
+    content = currentTaskView ?? [
+      <Stack key="readonly-message" gap={3} align="center">
+        <Text color="gray.300" textAlign="center" paddingX={4} py={8} fontSize="md">
+          Connect the owner wallet to start quests, craft, or manage energy passes.
+        </Text>
+        <Box pt={16}>
+          <ConnectWalletButton title="Connect Wallet" />
+        </Box>
+      </Stack>
+    ]
+  } else if (!content) {
     if (isQuests) {
       content = questSections.length
         ? questSections.map((section) => (

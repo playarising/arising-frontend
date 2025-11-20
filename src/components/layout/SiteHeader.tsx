@@ -110,7 +110,10 @@ export function SiteHeader() {
           throw new Error(result?.error ?? 'Unknown authentication error')
         }
 
-        router.replace('/play')
+        const onCharacterPage = pathname?.startsWith('/character/')
+        if (!onCharacterPage) {
+          router.replace('/play')
+        }
       } catch (error) {
         console.error('Wallet signature/auth failed, disconnecting', error)
         if (!cancelled) {

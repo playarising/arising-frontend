@@ -3,7 +3,7 @@
 import { Box, Heading, Text, VStack } from '@chakra-ui/react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
-import { StartButton } from './common/StartButton'
+import { ConnectWalletButton } from './common'
 
 const MotionBox = motion(Box)
 const MotionHeading = motion(Heading)
@@ -70,7 +70,7 @@ export const LandingPage = () => {
         transition={{ duration: 1, delay: 2.5 }}
         paddingY={5}
       >
-        <StartButton />
+        <ConnectWalletButton />
       </MotionBox>
     </VStack>
   )
