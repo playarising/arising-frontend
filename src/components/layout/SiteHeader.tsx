@@ -134,7 +134,7 @@ export function SiteHeader() {
     return () => {
       cancelled = true
     }
-  }, [connected, disconnect, walletAddress, router, session?.user?.address, sessionStatus, signMessage, publicKey])
+  }, [connected, disconnect, walletAddress, router, session?.user?.address, sessionStatus, signMessage, publicKey, pathname?.startsWith])
 
   useEffect(() => {
     if (sessionStatus !== 'authenticated') {
