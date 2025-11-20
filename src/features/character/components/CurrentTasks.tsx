@@ -51,22 +51,13 @@ const CIV_INDEX: Record<string, number> = {
   Tarki: 5
 }
 
-export function CurrentTasks({
-  questState,
-  recipeState,
-  codexQuests,
-  codexRecipes,
-  civilization,
-  civilizationCharacterId
-}: CurrentTasksProps) {
+export function CurrentTasks({ questState, recipeState, civilization, civilizationCharacterId }: CurrentTasksProps) {
   const { connection } = useConnection()
   const { publicKey, signTransaction } = useWallet()
   const router = useRouter()
   const refreshInventory = useGameStore((state) => state.refreshInventory)
   const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints || [])
   const codex = useCodexStore((state) => state.codex)
-  const loadCodex = useCodexStore((state) => state.loadCodex)
-  const codexLoading = useCodexStore((state) => state.isLoading)
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
   const [submitting, setSubmitting] = useState<'quest' | 'recipe' | null>(null)
   const isUserRejection = useCallback((err: unknown) => err instanceof Error && /user rejected/i.test(err.message), [])
@@ -78,21 +69,13 @@ export function CurrentTasks({
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    if (!codex && !codexLoading) {
-      loadCodex()
-    }
-  }, [codex, codexLoading, loadCodex])
-
   const effectiveQuests = useMemo(() => {
-    if (codexQuests.length) return codexQuests
     return codex?.quests ?? []
-  }, [codexQuests, codex])
+  }, [codex])
 
   const effectiveRecipes = useMemo(() => {
-    if (codexRecipes.length) return codexRecipes
     return codex?.recipes ?? []
-  }, [codexRecipes, codex])
+  }, [codex])
 
   const questProgress = resolveProgress(questState, currentTime)
   const recipeProgress = resolveProgress(recipeState, currentTime)

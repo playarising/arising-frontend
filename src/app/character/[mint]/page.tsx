@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
+import type { JSX } from 'react'
 import { ActionsSwitcher, CurrentTasks, EnergyStatus, StatAllocationList } from '@/features'
 import {
   authOptions,
@@ -156,10 +157,18 @@ export default async function CharacterPage({ params }: { params: Params }) {
 
   const resolvedQuestState = parseState(character.currentQuest)
   const resolvedRecipeState = parseState(character.currentRecipe)
+  const resolvedEnergyPasses = parseState(character.energyPasses) as {
+    passes_owned?: number
+    purchases_in_window?: number
+    purchase_window_start?: number
+    usage_in_window?: number
+    usage_window_start?: number
+  } | null
 
   const renderStatsAccordions = (
     valuePrefix: string,
     options?: {
+      energyContent?: JSX.Element | null
       includeAttributes?: boolean
       includeTasks?: boolean
       includeInventory?: boolean
@@ -173,6 +182,41 @@ export default async function CharacterPage({ params }: { params: Params }) {
       bg="rgba(255,255,255,0.02)"
       width="full"
     >
+      {options?.energyContent && (
+        <Accordion.Item value={`${valuePrefix}-energy-passes`}>
+          <Accordion.ItemTrigger
+            paddingX={3}
+            paddingY={2}
+            _hover={{ bg: 'custom-keppel' }}
+            display="flex"
+            alignItems="center"
+            gap={2}
+            color="white"
+            fontWeight="800"
+            fontSize="md"
+            background="custom-keppel"
+            borderBottom="1px solid rgba(0,0,0,0.1)"
+          >
+            <Text flex="1" textAlign="left">
+              Energy Pass
+            </Text>
+            <Text
+              as="span"
+              title="Buy energy passes (2 USDC each), up to 5 purchases and 3 redeems per 24h. Redeeming instantly refills energy."
+              fontWeight="800"
+              fontSize="sm"
+              cursor="help"
+              color="black"
+            ></Text>
+            <Accordion.ItemIndicator />
+          </Accordion.ItemTrigger>
+          <Accordion.ItemContent>
+            <Accordion.ItemBody paddingX={3} paddingY={3}>
+              {options.energyContent}
+            </Accordion.ItemBody>
+          </Accordion.ItemContent>
+        </Accordion.Item>
+      )}
       <Accordion.Item value={`${valuePrefix}-core`}>
         <Accordion.ItemTrigger
           paddingX={3}
@@ -380,8 +424,21 @@ export default async function CharacterPage({ params }: { params: Params }) {
               nextRefillEpochSeconds={nextRefillSeconds}
               civilization={character.civilization}
               civilizationCharacterId={character.civilizationCharacterId}
+              energyPasses={resolvedEnergyPasses}
+              showPasses={false}
             />
             {renderStatsAccordions('overview', {
+              energyContent: (
+                <EnergyStatus
+                  energy={parsedEnergy}
+                  maxEnergy={maxEnergy}
+                  nextRefillEpochSeconds={nextRefillSeconds}
+                  civilization={character.civilization}
+                  civilizationCharacterId={character.civilizationCharacterId}
+                  energyPasses={resolvedEnergyPasses}
+                  showEnergy={false}
+                />
+              ),
               includeAttributes: true,
               includeTasks: true,
               includeInventory: true,

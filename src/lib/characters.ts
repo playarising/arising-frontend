@@ -20,6 +20,7 @@ export type CharacterRecord = {
   attributes?: Record<string, number> | string | null
   currentQuest?: QuestOrRecipeStatus | null
   currentRecipe?: QuestOrRecipeStatus | null
+  energyPasses?: Record<string, number> | string | null
 }
 
 export type CharacterWithMetadata = CharacterRecord & {
@@ -308,6 +309,7 @@ const CHARACTER_QUERY = `
         currentRecipe
         lastEnergyRefill
         experience
+        energyPasses
       }
     }
   }
@@ -328,6 +330,7 @@ const CHARACTER_BY_MINT_QUERY = `
       currentRecipe
       lastEnergyRefill
       experience
+      energyPasses
     }
   }
 `
