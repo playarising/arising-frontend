@@ -1,17 +1,17 @@
-"use client"
+'use client'
 
 import { Box, Button, Flex, Stack, Text } from '@chakra-ui/react'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, Transaction } from '@solana/web3.js'
-import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 import {
   calculateAttributePointAvailability,
   calculateCorePointAvailability,
   resolveCivilizationIndex
 } from '@/features'
-import { allocateAttributesIx, allocateCoreStatsIx, findCharacterPda } from '@/lib'
 import type { AttributesInput, CoreStatsInput } from '@/lib'
+import { allocateAttributesIx, allocateCoreStatsIx, findCharacterPda } from '@/lib'
 import { ModuleLoader } from './ModuleLoader'
 
 const CORE_KEYS = ['might', 'speed', 'intellect'] as const
@@ -59,16 +59,13 @@ export function StatAllocationList({
 
   const keys = type === 'core' ? CORE_KEYS : ATTRIBUTE_KEYS
 
-  const pendingTotal = useMemo(
-    () => Object.values(pending).reduce((total, value) => total + value, 0),
-    [pending]
-  )
+  const pendingTotal = useMemo(() => Object.values(pending).reduce((total, value) => total + value, 0), [pending])
   const remainingAvailable = Math.max(0, availability.available - pendingTotal)
   const baseMap = availability.base as Record<string, number>
 
   useEffect(() => {
     setPending({})
-  }, [civilization, level, type, stats])
+  }, [])
 
   const increment = (key: string) => {
     if (remainingAvailable <= 0 || submitting) return
@@ -118,13 +115,13 @@ export function StatAllocationList({
       const ix =
         type === 'core'
           ? allocateCoreStatsIx(
-            { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationCore },
-            { character: characterPda, authority: publicKey }
-          )
+              { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationCore },
+              { character: characterPda, authority: publicKey }
+            )
           : allocateAttributesIx(
-            { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationAttr },
-            { character: characterPda, authority: publicKey }
-          )
+              { civilization: civIndex, characterId: civilizationCharacterId, allocation: allocationAttr },
+              { character: characterPda, authority: publicKey }
+            )
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
       const computeIxs = [
@@ -154,14 +151,7 @@ export function StatAllocationList({
           const showIncrement = remainingAvailable > 0
           const showDecrement = pendingValue > 0
           return (
-            <Flex
-              key={key}
-              align="center"
-              justify="space-between"
-              paddingY={1}
-              gap={3}
-              flexWrap="wrap"
-            >
+            <Flex key={key} align="center" justify="space-between" paddingY={1} gap={3} flexWrap="wrap">
               <Text color="white" fontWeight="700">
                 {LABEL_MAP[key] ?? key}
               </Text>

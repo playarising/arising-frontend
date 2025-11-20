@@ -1,27 +1,27 @@
-import { Accordion, Box, Button, Flex, Grid, GridItem, Progress, Stack, Text } from '@chakra-ui/react'
+import { Accordion, Flex, Grid, GridItem, Progress, Stack, Text } from '@chakra-ui/react'
 import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { Connection, clusterApiUrl, PublicKey } from '@solana/web3.js'
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import {
-  LEVEL_CURVE,
+  ActionsSwitcher,
+  CurrentTasks,
+  calculateCorePointAvailability,
+  EnergyStatus,
+  StatAllocationList
+} from '@/features'
+import {
   authOptions,
   calculateQuestEnergyCost,
   calculateRecipeEnergyCost,
   fetchCharacterMetadata,
   fetchCharactersForAuthority,
-  fetchCharacterByMint,
   fetchCodex,
+  LEVEL_CURVE,
   levelFromExperience
 } from '@/lib'
-import { ActionsSwitcher, CurrentTasks, EnergyStatus, StatAllocationList } from '@/features'
-import {
-  calculateAttributePointAvailability,
-  calculateCorePointAvailability
-} from '@/features'
-
-import { Metadata } from 'next'
 
 type Params = Promise<{ mint: string }>
 
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   // We need to fetch the character to get its details
   // Since we don't have the authority here easily without session, we might need a direct fetch by mint
   // Assuming fetchCharacterByMint exists or we can use fetchCharactersForAuthority if we had the owner.
-  // But for SEO, we want public data. 
+  // But for SEO, we want public data.
   // Let's check if we can fetch by mint directly.
   // Based on previous analysis, there is a fetchCharacterByMint in lib/characters.ts
 
@@ -46,10 +46,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
 
   const { fetchCharacterMetadata } = await import('@/lib')
-  const metadata = await fetchCharacterMetadata(character.civilization, character.civilizationCharacterId).catch(() => undefined)
+  const metadata = await fetchCharacterMetadata(character.civilization, character.civilizationCharacterId).catch(
+    () => undefined
+  )
 
   const name = metadata?.name ?? `Character ${mint.slice(0, 8)}`
-  const level = metadata?.attributes?.find(a => a.trait_type === 'Level')?.value ?? 'Unknown'
+  const level = metadata?.attributes?.find((a) => a.trait_type === 'Level')?.value ?? 'Unknown'
   const civ = character.civilization
 
   return {
@@ -100,14 +102,13 @@ export default async function CharacterPage({ params }: { params: Params }) {
         : null
   const hasExperienceData = rawExperience !== null && Number.isFinite(rawExperience)
   const totalExperience = hasExperienceData ? Number(rawExperience) : 0
-  const characterLevel =
-    hasExperienceData
-      ? levelFromExperience(totalExperience)
-      : Number.isFinite(metadataLevelNumber)
-        ? Number(metadataLevelNumber)
-        : 1
+  const characterLevel = hasExperienceData
+    ? levelFromExperience(totalExperience)
+    : Number.isFinite(metadataLevelNumber)
+      ? Number(metadataLevelNumber)
+      : 1
   const prevThreshold =
-    characterLevel > 1 ? LEVEL_CURVE.find((entry) => entry.level === characterLevel - 1)?.cumulativeXp ?? 0 : 0
+    characterLevel > 1 ? (LEVEL_CURVE.find((entry) => entry.level === characterLevel - 1)?.cumulativeXp ?? 0) : 0
   const currentCurveEntry = LEVEL_CURVE.find((entry) => entry.level === characterLevel)
   const xpNeededThisLevel = currentCurveEntry?.xpToNext ?? 0
   const xpIntoCurrentLevel = hasExperienceData ? Math.max(0, totalExperience - prevThreshold) : 0
@@ -145,7 +146,7 @@ export default async function CharacterPage({ params }: { params: Params }) {
     character.civilization,
     parsedStatsNumbers
   )
-  const availableCorePoints = corePointAvailability.available
+  const _availableCorePoints = corePointAvailability.available
 
   let parsedAttributesObj: Record<string, unknown> = {}
   if (typeof character.attributes === 'string') {
@@ -160,12 +161,7 @@ export default async function CharacterPage({ params }: { params: Params }) {
 
   const parsedAttributesEntries = toNumericEntries(parsedAttributesObj)
   const parsedAttributesNumbers = Object.fromEntries(parsedAttributesEntries) as Record<string, number>
-  const attributePointAvailability = calculateAttributePointAvailability(
-    characterLevel,
-    character.civilization,
-    parsedAttributesNumbers
-  )
-  const availableAttributePoints = attributePointAvailability.available
+
   const parseState = (value: string | object | null | undefined) => {
     if (!value) return null
     if (typeof value === 'string') {
@@ -328,7 +324,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
           recipeState={resolvedRecipeState}
           codexQuests={codex.quests}
           codexRecipes={codex.recipes}
-          codexResourceMints={codex.resourceMints}
           civilization={character.civilization}
           civilizationCharacterId={character.civilizationCharacterId}
         />
@@ -526,7 +521,6 @@ export default async function CharacterPage({ params }: { params: Params }) {
             <ActionsSwitcher
               quests={questsForClient}
               recipes={recipesForClient}
-              codexResourceMints={codex.resourceMints}
               characterLevel={characterLevel}
               characterEnergy={parsedEnergy}
               characterStats={Object.fromEntries(parsedStatsEntries)}

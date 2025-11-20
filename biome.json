@@ -2,7 +2,13 @@
   "$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
   "files": {
     "maxSize": 10485760,
-    "includes": ["src"]
+    "includes": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx", "src/**/*.json"],
+    "ignoreUnknown": true
+  },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
   },
   "assist": {
     "actions": {
@@ -23,6 +29,18 @@
       "quoteStyle": "single",
       "trailingCommas": "none",
       "semicolons": "asNeeded"
+    }
+  },
+  "json": {
+    "formatter": {
+      "enabled": true,
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineWidth": 120
+    },
+    "parser": {
+      "allowComments": true,
+      "allowTrailingCommas": false
     }
   },
   "linter": {

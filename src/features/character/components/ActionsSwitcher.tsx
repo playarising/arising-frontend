@@ -1,18 +1,19 @@
 'use client'
 
-import { Badge, Box, Button, Flex, Grid, Progress, Stack, Text } from '@chakra-ui/react'
+import { Badge, Box, Button, Flex, Grid, Stack, Text } from '@chakra-ui/react'
 import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
-import { type JSX, useCallback, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { type JSX, useCallback, useEffect, useState, useTransition } from 'react'
+import { formatDuration, parseJson, resolveProgress, sanitizeName, splitTitle } from '@/features'
+import { useGameStore } from '@/features/character/stores/useGameStore'
+import type { QuestReward, RecipeInput, RecipeOutput } from '@/lib'
 import { claimQuestIx, claimRecipeIx, findCharacterPda, startQuestIx, startRecipeIx } from '@/lib'
-import type { CodexResourceMint, QuestReward, RecipeInput, RecipeOutput } from '@/lib'
+import { useCodexStore } from '@/stores'
 import { CurrentTaskCard } from './CurrentTaskCard'
 import { ModuleLoader } from './ModuleLoader'
 import { ResourceBadges, RewardBadges, StatRequirementBadges } from './TaskBadges'
-import { formatDuration, parseJson, resolveProgress, sanitizeName, splitTitle } from '@/features'
-import { useGameStore } from '@/features/character/stores/useGameStore'
 
 type QuestState = {
   quest_id?: number
@@ -55,7 +56,6 @@ export type ActionsSwitcherProps = {
     output?: RecipeOutput | RecipeOutput[]
     durationSeconds?: number
   }[]
-  codexResourceMints: CodexResourceMint[]
   characterLevel: number
   characterEnergy: number
   characterStats: Record<string, number>
@@ -91,7 +91,6 @@ const CIV_INDEX: Record<string, number> = {
 export function ActionsSwitcher({
   quests,
   recipes,
-  codexResourceMints,
   characterLevel,
   characterEnergy,
   characterStats,
@@ -109,6 +108,7 @@ export function ActionsSwitcher({
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
 
   const { inventory, setInventory, refreshInventory } = useGameStore()
+  const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints || [])
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -221,8 +221,6 @@ export function ActionsSwitcher({
     return { canPerform: issues.length === 0, issues }
   }
 
-
-
   const handleStartQuest = useCallback(
     async (questId: number) => {
       if (!publicKey || !signTransaction) return
@@ -249,24 +247,16 @@ export function ActionsSwitcher({
         const sig = await connection.sendRawTransaction(signed.serialize())
         await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
 
-        const resourceMintMap = new Map(
-          codexResourceMints.map((r) => [r.mint, { resource: r.resource, displayName: r.displayName, mint: r.mint }])
-        )
-
         startTransition(async () => {
-          await Promise.all([
-            refreshInventory(connection, publicKey, resourceMintMap),
-            router.refresh()
-          ])
+          await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
         })
-
       } catch (error) {
         console.error('Failed to start quest:', error)
         alert(`Failed to start quest: ${error instanceof Error ? error.message : 'Unknown error'}`)
         setSubmitting(null)
       }
     },
-    [publicKey, signTransaction, civilization, civilizationCharacterId, connection, router, refreshInventory, codexResourceMints]
+    [publicKey, signTransaction, civilization, civilizationCharacterId, connection, router, refreshInventory]
   )
 
   const handleStartRecipe = useCallback(
@@ -350,24 +340,26 @@ export function ActionsSwitcher({
         const sig = await connection.sendRawTransaction(signed.serialize())
         await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
 
-        const resourceMintMap = new Map(
-          codexResourceMints.map((r) => [r.mint, { resource: r.resource, displayName: r.displayName, mint: r.mint }])
-        )
-
         startTransition(async () => {
-          await Promise.all([
-            refreshInventory(connection, publicKey, resourceMintMap),
-            router.refresh()
-          ])
+          await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
         })
-
       } catch (error) {
         console.error('Failed to start recipe:', error)
         alert(`Failed to start recipe: ${error instanceof Error ? error.message : 'Unknown error'}`)
         setSubmitting(null)
       }
     },
-    [publicKey, signTransaction, civilization, civilizationCharacterId, connection, recipes, codexResourceMints, router, refreshInventory]
+    [
+      publicKey,
+      signTransaction,
+      civilization,
+      civilizationCharacterId,
+      connection,
+      recipes,
+      router,
+      refreshInventory,
+      codexResourceMints.find
+    ]
   )
 
   const handleClaimQuest = useCallback(async () => {
@@ -417,23 +409,26 @@ export function ActionsSwitcher({
       const sig = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
 
-      const resourceMintMap = new Map(
-        codexResourceMints.map((r) => [r.mint, { resource: r.resource, displayName: r.displayName, mint: r.mint }])
-      )
-
       startTransition(async () => {
-        await Promise.all([
-          refreshInventory(connection, publicKey, resourceMintMap),
-          router.refresh()
-        ])
+        await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
       })
-
     } catch (error) {
       console.error('Failed to claim quest:', error)
       alert(`Failed to claim quest: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setSubmitting(null)
     }
-  }, [publicKey, signTransaction, currentQuest, civilization, civilizationCharacterId, connection, router, quests, codexResourceMints, refreshInventory])
+  }, [
+    publicKey,
+    signTransaction,
+    currentQuest,
+    civilization,
+    civilizationCharacterId,
+    connection,
+    router,
+    quests,
+    refreshInventory,
+    codexResourceMints.find
+  ])
 
   const handleClaimRecipe = useCallback(async () => {
     if (!publicKey || !signTransaction || !currentRecipe) return
@@ -482,23 +477,26 @@ export function ActionsSwitcher({
       const sig = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
 
-      const resourceMintMap = new Map(
-        codexResourceMints.map((r) => [r.mint, { resource: r.resource, displayName: r.displayName, mint: r.mint }])
-      )
-
       startTransition(async () => {
-        await Promise.all([
-          refreshInventory(connection, publicKey, resourceMintMap),
-          router.refresh()
-        ])
+        await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
       })
-
     } catch (error) {
       console.error('Failed to claim recipe:', error)
       alert(`Failed to claim recipe: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setSubmitting(null)
     }
-  }, [publicKey, signTransaction, currentRecipe, civilization, civilizationCharacterId, connection, router, recipes, codexResourceMints, refreshInventory])
+  }, [
+    publicKey,
+    signTransaction,
+    currentRecipe,
+    civilization,
+    civilizationCharacterId,
+    connection,
+    router,
+    recipes,
+    refreshInventory,
+    codexResourceMints.find
+  ])
 
   useEffect(() => {
     if (!isPending) {
@@ -590,12 +588,7 @@ export function ActionsSwitcher({
           </Box>
 
           {!validation.canPerform && validation.issues.length > 0 && (
-            <Box
-              border="1px solid rgba(239, 68, 68, 0.3)"
-              borderRadius="md"
-              padding={3}
-              bg="rgba(239, 68, 68, 0.08)"
-            >
+            <Box border="1px solid rgba(239, 68, 68, 0.3)" borderRadius="md" padding={3} bg="rgba(239, 68, 68, 0.08)">
               <Text color="red.400" fontSize="xs" fontWeight="600" mb={1.5}>
                 REQUIREMENTS NOT MET
               </Text>
@@ -621,7 +614,11 @@ export function ActionsSwitcher({
             cursor={validation.canPerform && submitting !== quest.id && !isPending ? 'pointer' : 'not-allowed'}
             onClick={() => handleStartQuest(quest.id)}
           >
-            {submitting === quest.id ? 'Submitting...' : isPending && submitting === quest.id ? 'Refreshing...' : 'Start quest'}
+            {submitting === quest.id
+              ? 'Submitting...'
+              : isPending && submitting === quest.id
+                ? 'Refreshing...'
+                : 'Start quest'}
           </Button>
         </Stack>
       </Box>
@@ -691,12 +688,7 @@ export function ActionsSwitcher({
             </Box>
 
             {!validation.canPerform && validation.issues.length > 0 && (
-              <Box
-                border="1px solid rgba(239, 68, 68, 0.3)"
-                borderRadius="md"
-                padding={3}
-                bg="rgba(239, 68, 68, 0.08)"
-              >
+              <Box border="1px solid rgba(239, 68, 68, 0.3)" borderRadius="md" padding={3} bg="rgba(239, 68, 68, 0.08)">
                 <Text color="red.400" fontSize="xs" fontWeight="600" mb={1.5}>
                   REQUIREMENTS NOT MET
                 </Text>
@@ -722,7 +714,11 @@ export function ActionsSwitcher({
               cursor={validation.canPerform && submitting !== recipe.id && !isPending ? 'pointer' : 'not-allowed'}
               onClick={() => handleStartRecipe(recipe.id)}
             >
-              {submitting === recipe.id ? 'Submitting...' : isPending && submitting === recipe.id ? 'Refreshing...' : 'Start craft'}
+              {submitting === recipe.id
+                ? 'Submitting...'
+                : isPending && submitting === recipe.id
+                  ? 'Refreshing...'
+                  : 'Start craft'}
             </Button>
           </Stack>
         </Box>
@@ -783,12 +779,7 @@ export function ActionsSwitcher({
             </Box>
 
             {!validation.canPerform && validation.issues.length > 0 && (
-              <Box
-                border="1px solid rgba(239, 68, 68, 0.3)"
-                borderRadius="md"
-                padding={3}
-                bg="rgba(239, 68, 68, 0.08)"
-              >
+              <Box border="1px solid rgba(239, 68, 68, 0.3)" borderRadius="md" padding={3} bg="rgba(239, 68, 68, 0.08)">
                 <Text color="red.400" fontSize="xs" fontWeight="600" mb={1.5}>
                   REQUIREMENTS NOT MET
                 </Text>
@@ -814,7 +805,11 @@ export function ActionsSwitcher({
               cursor={validation.canPerform && submitting !== recipe.id && !isPending ? 'pointer' : 'not-allowed'}
               onClick={() => handleStartRecipe(recipe.id)}
             >
-              {submitting === recipe.id ? 'Submitting...' : isPending && submitting === recipe.id ? 'Refreshing...' : 'Start forge'}
+              {submitting === recipe.id
+                ? 'Submitting...'
+                : isPending && submitting === recipe.id
+                  ? 'Refreshing...'
+                  : 'Start forge'}
             </Button>
           </Stack>
         </Box>
@@ -874,16 +869,16 @@ export function ActionsSwitcher({
     if (isQuests) {
       content = questSections.length
         ? questSections.map((section) => (
-          <Stack key={section.title} gap={2} border="1px solid rgba(255,255,255,0.1)" borderRadius="md" padding={3}>
-            <Text color="white" fontWeight="800">
-              {section.title}
-            </Text>
-            <Text color="gray.400" fontSize="sm">
-              {section.copy}
-            </Text>
-            <Stack gap={2}>{section.items}</Stack>
-          </Stack>
-        ))
+            <Stack key={section.title} gap={2} border="1px solid rgba(255,255,255,0.1)" borderRadius="md" padding={3}>
+              <Text color="white" fontWeight="800">
+                {section.title}
+              </Text>
+              <Text color="gray.400" fontSize="sm">
+                {section.copy}
+              </Text>
+              <Stack gap={2}>{section.items}</Stack>
+            </Stack>
+          ))
         : [<Text key="no-quests">None</Text>]
     } else if (isCraft) {
       content = craftList.length ? craftList : [<Text key="no-craft">None</Text>]
@@ -898,13 +893,14 @@ export function ActionsSwitcher({
     <Box position="relative">
       <ModuleLoader loading={Boolean(submitting)} label="Submitting transaction..." />
       <Stack gap={4} width="full">
-        <Grid
-          templateColumns="auto minmax(0, 1fr) auto"
-          alignItems="center"
-          gap={{ base: 2, md: 0 }}
-          width="full"
-        >
-          <Box as="button" aria-label="Previous view" background="transparent" _hover={{ opacity: 0.7 }} onClick={goPrev}>
+        <Grid templateColumns="auto minmax(0, 1fr) auto" alignItems="center" gap={{ base: 2, md: 0 }} width="full">
+          <Box
+            as="button"
+            aria-label="Previous view"
+            background="transparent"
+            _hover={{ opacity: 0.7 }}
+            onClick={goPrev}
+          >
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
               <title>ChevronLeft</title>
               <path d="M15 6l-6 6 6 6" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />

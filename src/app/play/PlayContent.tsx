@@ -9,18 +9,21 @@ import { AnimatePresence, motion } from 'framer-motion'
 import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import { AppLink } from '@/components'
+import { useGameStore } from '@/features'
 import {
+  type CharacterWithMetadata,
+  fetchCharacterMetadata,
+  fetchCharactersForAuthority,
   findCharacterMintPda,
   findCharacterPda,
   findCharacterTokenPda,
   findMintStatePda,
+  type Gender,
   levelFromExperience,
   mintCharacterIx,
   OPEN_MINT_MODAL_EVENT,
-  TOKEN_METADATA_PROGRAM_ID,
-  type Gender
+  TOKEN_METADATA_PROGRAM_ID
 } from '@/lib'
-import { type CharacterWithMetadata, fetchCharacterMetadata, fetchCharactersForAuthority } from '@/lib'
 
 type Status =
   | { state: 'idle' }
@@ -136,6 +139,7 @@ export function PlayContent() {
   const { connection } = useConnection()
   const { publicKey, signTransaction, connected } = useWallet()
   const { setVisible } = useWalletModal()
+  const initializeGameStore = useGameStore((state) => state.initialize)
 
   const [characters, setCharacters] = useState<CharacterWithMetadata[]>([])
   const [loadingCharacters, setLoadingCharacters] = useState(false)
@@ -159,25 +163,33 @@ export function PlayContent() {
     })
   }
 
-  const loadCharacters = useCallback(async (owner: string) => {
-    try {
-      setLoadingCharacters(true)
-      const base = await fetchCharactersForAuthority(owner)
-      const withMeta: CharacterWithMetadata[] = await Promise.all(
-        base.map(async (c) => {
-          const metadata = await fetchCharacterMetadata(c.civilization, c.civilizationCharacterId)
-          return { ...c, metadata }
-        })
-      )
-      setCharacters(withMeta)
-      setCarouselIndex(0)
-    } catch (error) {
-      console.error('Failed to load characters', error)
-      setCharacters([])
-    } finally {
-      setLoadingCharacters(false)
-    }
-  }, [])
+  const loadCharacters = useCallback(
+    async (owner: string) => {
+      try {
+        setLoadingCharacters(true)
+        const base = await fetchCharactersForAuthority(owner)
+        const withMeta: CharacterWithMetadata[] = await Promise.all(
+          base.map(async (c) => {
+            const metadata = await fetchCharacterMetadata(c.civilization, c.civilizationCharacterId)
+            return { ...c, metadata }
+          })
+        )
+        setCharacters(withMeta)
+        setCarouselIndex(0)
+
+        // Initialize game store with inventory and resource mints
+        if (publicKey) {
+          await initializeGameStore(connection, publicKey)
+        }
+      } catch (error) {
+        console.error('Failed to load characters', error)
+        setCharacters([])
+      } finally {
+        setLoadingCharacters(false)
+      }
+    },
+    [connection, publicKey, initializeGameStore]
+  )
 
   useEffect(() => {
     if (!publicKey || !connected) {
@@ -546,8 +558,8 @@ export function PlayContent() {
                 }
                 const statsEntries = parsedStats
                   ? (Object.entries(parsedStats).filter(([, value]) => typeof value === 'number') as Array<
-                    [string, number]
-                  >)
+                      [string, number]
+                    >)
                   : []
 
                 const variants = {
@@ -611,13 +623,7 @@ export function PlayContent() {
                               {resolvedLevel}
                             </Text>
                             {statsEntries.length ? (
-                              <Stack
-                                direction="row"
-                                flexWrap="wrap"
-                                justify="center"
-                                gap={2}
-                                width="full"
-                              >
+                              <Stack direction="row" flexWrap="wrap" justify="center" gap={2} width="full">
                                 {statsEntries.map(([key, value]) => (
                                   <Badge key={key} colorScheme="purple" fontSize="xs" px={2} py={0.5}>
                                     {key.charAt(0).toUpperCase() + key.slice(1)} {value}

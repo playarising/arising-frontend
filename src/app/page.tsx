@@ -1,12 +1,13 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import { Metadata } from 'next'
 import { LandingPage, PageContainer } from '@/components'
 import { authOptions } from '@/lib'
 
 export const metadata: Metadata = {
   title: 'Arising - Web3 Roleplay RPG',
-  description: 'Join the first web3 roleplay community. Create your character, shape the fate of Etia, and engage in dynamic campaigns.',
+  description:
+    'Join the first web3 roleplay community. Create your character, shape the fate of Etia, and engage in dynamic campaigns.',
   alternates: {
     canonical: 'https://playarising.com'
   }

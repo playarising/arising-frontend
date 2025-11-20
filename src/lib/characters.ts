@@ -332,7 +332,6 @@ const CHARACTER_BY_MINT_QUERY = `
   }
 `
 
-
 export async function fetchCharactersForAuthority(authority: string): Promise<CharacterRecord[]> {
   const res = await fetch(INDEXER_ENDPOINT, {
     method: 'POST',
@@ -356,11 +355,11 @@ export async function fetchCharacterMetadata(
   civilizationCharacterId: number
 ): Promise<
   | {
-    name?: string
-    image?: string
-    description?: string
-    attributes?: { trait_type?: string; value?: string | number }[]
-  }
+      name?: string
+      image?: string
+      description?: string
+      attributes?: { trait_type?: string; value?: string | number }[]
+    }
   | undefined
 > {
   const slug = civilization.toLowerCase()

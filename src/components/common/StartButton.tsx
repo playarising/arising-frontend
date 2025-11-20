@@ -1,8 +1,8 @@
 'use client'
 
 import { Flex, Text } from '@chakra-ui/react'
-import Image from 'next/image'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
+import Image from 'next/image'
 
 export function StartButton() {
   const { setVisible } = useWalletModal()

@@ -54,8 +54,7 @@ const computeStatModifier = (efficiency: number) => {
 
 const computeLowLevelPenalty = (characterLevel: number) => (characterLevel >= 10 ? 1 : 1 + (10 - characterLevel) * 0.04)
 
-const computeCooldownHours = (cooldownSeconds?: number) =>
-  Math.max((toNumber(cooldownSeconds, 3600) || 0) / 3600, 0.25)
+const computeCooldownHours = (cooldownSeconds?: number) => Math.max((toNumber(cooldownSeconds, 3600) || 0) / 3600, 0.25)
 
 const computeRewardPressure = (rewards: QuestReward[] | undefined, cooldownHours: number) => {
   const rewardArray = Array.isArray(rewards) ? rewards : []
@@ -70,7 +69,7 @@ const computeRewardPressure = (rewards: QuestReward[] | undefined, cooldownHours
     }, 0),
     0.5
   )
-  return clamp((rewardWeight / cooldownHours) / 1.5, 0.85, 1.3)
+  return clamp(rewardWeight / cooldownHours / 1.5, 0.85, 1.3)
 }
 
 const computeOutputPressure = (output: RecipeOutput | RecipeOutput[] | undefined, cooldownHours: number) => {
@@ -83,7 +82,7 @@ const computeOutputPressure = (output: RecipeOutput | RecipeOutput[] | undefined
     }, 0),
     0.5
   )
-  return clamp((outputWeight / cooldownHours) / 1.5, 0.85, 1.3)
+  return clamp(outputWeight / cooldownHours / 1.5, 0.85, 1.3)
 }
 
 const computeStatsPressure = (required: Record<CoreStatKey, number>) => {
@@ -111,10 +110,17 @@ const finalizeEnergy = (
   cooldownPressure: number,
   rewardOrOutputPressure: number,
   statsPressure: number
-) => Math.max(1, Math.ceil(baseEnergy * statModifier * lowLevelPenalty * cooldownPressure * rewardOrOutputPressure * statsPressure))
+) =>
+  Math.max(
+    1,
+    Math.ceil(baseEnergy * statModifier * lowLevelPenalty * cooldownPressure * rewardOrOutputPressure * statsPressure)
+  )
 
 export const calculateQuestEnergyCost = (
-  quest: Pick<CodexQuest, 'baseEnergyCost' | 'levelRequired' | 'cooldownSeconds' | 'minimumStats' | 'rewards' | 'bypassStatFloors'>,
+  quest: Pick<
+    CodexQuest,
+    'baseEnergyCost' | 'levelRequired' | 'cooldownSeconds' | 'minimumStats' | 'rewards' | 'bypassStatFloors'
+  >,
   characterLevel: number,
   characterStats: CoreStats
 ) => {

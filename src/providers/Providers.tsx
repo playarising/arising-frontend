@@ -11,6 +11,7 @@ import '@solana/wallet-adapter-react-ui/styles.css'
 
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base'
 import { clusterApiUrl } from '@solana/web3.js'
+import { CodexProvider } from './CodexProvider'
 import { ThemeProvider } from './Theme'
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -23,28 +24,36 @@ export function Providers({ children }: { children: ReactNode }) {
   const wallets = useMemo(() => [new PhantomWalletAdapter(), new BackpackWalletAdapter(), new TorusWalletAdapter()], [])
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof performance === 'undefined' || typeof performance.measure !== 'function') {
+    if (
+      typeof window === 'undefined' ||
+      typeof performance === 'undefined' ||
+      typeof performance.measure !== 'function'
+    ) {
       return
     }
-      const originalMeasure = performance.measure.bind(performance)
-      const safeMeasure: typeof performance.measure = (name, startMark, endMark) => {
-        if (typeof startMark === 'string' && typeof endMark === 'string') {
-          const startEntries = performance.getEntriesByName(startMark)
-          const endEntries = performance.getEntriesByName(endMark)
-          const startTime = startEntries[startEntries.length - 1]?.startTime
-          const endTime = endEntries[endEntries.length - 1]?.startTime
-          if (typeof startTime === 'number' && typeof endTime === 'number' && endTime < startTime) {
-            return undefined as unknown as PerformanceMeasure
-          }
-        }
-        try {
-          return originalMeasure(name, startMark as any, endMark as any)
-        } catch (error) {
-          console.warn('Skipped performance.measure due to error:', error)
+    const originalMeasure = performance.measure.bind(performance)
+    const safeMeasure: typeof performance.measure = (
+      name: string,
+      startMark?: string | PerformanceMeasureOptions,
+      endMark?: string
+    ) => {
+      if (typeof startMark === 'string' && typeof endMark === 'string') {
+        const startEntries = performance.getEntriesByName(startMark)
+        const endEntries = performance.getEntriesByName(endMark)
+        const startTime = startEntries[startEntries.length - 1]?.startTime
+        const endTime = endEntries[endEntries.length - 1]?.startTime
+        if (typeof startTime === 'number' && typeof endTime === 'number' && endTime < startTime) {
           return undefined as unknown as PerformanceMeasure
         }
       }
-      performance.measure = safeMeasure
+      try {
+        return originalMeasure(name, startMark, endMark)
+      } catch (error) {
+        console.warn('Skipped performance.measure due to error:', error)
+        return undefined as unknown as PerformanceMeasure
+      }
+    }
+    performance.measure = safeMeasure
     return () => {
       performance.measure = originalMeasure
     }
@@ -53,11 +62,13 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <SessionProvider>
-        <ConnectionProvider endpoint={endpoint}>
-          <WalletProvider autoConnect wallets={wallets}>
-            <WalletModalProvider>{children}</WalletModalProvider>
-          </WalletProvider>
-        </ConnectionProvider>
+        <CodexProvider>
+          <ConnectionProvider endpoint={endpoint}>
+            <WalletProvider autoConnect wallets={wallets}>
+              <WalletModalProvider>{children}</WalletModalProvider>
+            </WalletProvider>
+          </ConnectionProvider>
+        </CodexProvider>
       </SessionProvider>
     </ThemeProvider>
   )

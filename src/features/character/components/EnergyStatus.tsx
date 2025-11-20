@@ -1,12 +1,12 @@
-"use client"
+'use client'
 
 import { Box, Button, Flex, Progress, Stack, Text } from '@chakra-ui/react'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, Transaction } from '@solana/web3.js'
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { findCharacterPda, refillEnergyIx } from '@/lib'
+import { useEffect, useState } from 'react'
 import { resolveCivilizationIndex } from '@/features'
+import { findCharacterPda, refillEnergyIx } from '@/lib'
 import { ModuleLoader } from './ModuleLoader'
 
 type Props = {

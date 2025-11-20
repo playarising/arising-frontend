@@ -1,5 +1,5 @@
+export * from './common'
+export * from './LandingPage'
 export * from './layout'
 export * from './navigation'
 export * from './seo'
-export * from './common'
-export * from './LandingPage'

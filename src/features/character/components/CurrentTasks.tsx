@@ -1,16 +1,17 @@
 'use client'
 
-import { Accordion, Stack, Text } from '@chakra-ui/react'
+import { Accordion, Text } from '@chakra-ui/react'
 import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { ComputeBudgetProgram, PublicKey, Transaction } from '@solana/web3.js'
-import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+import { resolveProgress, sanitizeName, splitTitle, useGameStore } from '@/features'
+import type { CodexQuest, CodexRecipe } from '@/lib'
 import { claimQuestIx, claimRecipeIx, findCharacterPda } from '@/lib'
-import type { CodexQuest, CodexRecipe, CodexResourceMint } from '@/lib'
+import { useCodexStore } from '@/stores'
 import { CurrentTaskCard } from './CurrentTaskCard'
-import { RewardBadges, ResourceBadges } from './TaskBadges'
-import { resolveProgress, sanitizeName, splitTitle } from '@/features'
+import { ResourceBadges, RewardBadges } from './TaskBadges'
 
 type QuestState = {
   quest_id?: number
@@ -37,7 +38,6 @@ type CurrentTasksProps = {
   recipeState: RecipeState | null
   codexQuests: CodexQuest[]
   codexRecipes: CodexRecipe[]
-  codexResourceMints: CodexResourceMint[]
   civilization: string
   civilizationCharacterId: number
 }
@@ -56,13 +56,14 @@ export function CurrentTasks({
   recipeState,
   codexQuests,
   codexRecipes,
-  codexResourceMints,
   civilization,
   civilizationCharacterId
 }: CurrentTasksProps) {
   const { connection } = useConnection()
   const { publicKey, signTransaction } = useWallet()
   const router = useRouter()
+  const refreshInventory = useGameStore((state) => state.refreshInventory)
+  const codexResourceMints = useCodexStore((state) => state.codex?.resourceMints || [])
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
   const [submitting, setSubmitting] = useState<'quest' | 'recipe' | null>(null)
 
@@ -122,15 +123,26 @@ export function CurrentTasks({
       const signed = await signTransaction(tx)
       const sig = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
-      router.refresh()
 
+      await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
     } catch (error) {
       console.error('Failed to claim quest:', error)
       alert(`Failed to claim quest: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setSubmitting(null)
     }
-  }, [publicKey, signTransaction, questState, civilization, civilizationCharacterId, connection, router, codexQuests, codexResourceMints])
+  }, [
+    publicKey,
+    signTransaction,
+    questState,
+    civilization,
+    civilizationCharacterId,
+    connection,
+    router,
+    codexQuests,
+    codexResourceMints,
+    refreshInventory
+  ])
 
   const handleClaimRecipe = useCallback(async () => {
     if (!publicKey || !signTransaction || !recipeState) return
@@ -178,15 +190,26 @@ export function CurrentTasks({
       const signed = await signTransaction(tx)
       const sig = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight })
-      router.refresh()
 
+      await Promise.all([refreshInventory(connection, publicKey), router.refresh()])
     } catch (error) {
       console.error('Failed to claim recipe:', error)
       alert(`Failed to claim recipe: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setSubmitting(null)
     }
-  }, [publicKey, signTransaction, recipeState, civilization, civilizationCharacterId, connection, router, codexRecipes, codexResourceMints])
+  }, [
+    publicKey,
+    signTransaction,
+    recipeState,
+    civilization,
+    civilizationCharacterId,
+    connection,
+    router,
+    codexRecipes,
+    codexResourceMints,
+    refreshInventory
+  ])
 
   return (
     <>

@@ -38,9 +38,11 @@ const DEFAULT_ATTRIBUTES: Attributes = { atk: 0, def: 0, mag_atk: 0, mag_def: 0,
 
 const normalizeCivilization = (value: string): CivilizationKey | null => {
   const normalized = value.replace(/[^a-z]/gi, '').toLowerCase()
-  return (Object.keys(CORE_BASE) as CivilizationKey[]).find(
-    (key) => key.replace(/[^a-z]/gi, '').toLowerCase() === normalized
-  ) ?? null
+  return (
+    (Object.keys(CORE_BASE) as CivilizationKey[]).find(
+      (key) => key.replace(/[^a-z]/gi, '').toLowerCase() === normalized
+    ) ?? null
+  )
 }
 
 const toNumber = (value: unknown): number | undefined => {
